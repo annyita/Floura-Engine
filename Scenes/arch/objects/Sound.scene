@@ -1,0 +1,15 @@
+[
+    {
+        "SoundPosition": [
+            -32.71011734008789,
+            2.5739569664001465,
+            -50.940643310546875
+        ],
+        "is3Dsound": true,
+        "isLoop": true,
+        "name": "jarvishum",
+        "path": "temp/jarvis/jarvishum.wav",
+        "pitch": 1.0,
+        "volume": 0.4000000059604645
+    }
+]

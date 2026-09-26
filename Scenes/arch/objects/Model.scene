@@ -1,0 +1,1091 @@
+[
+    {
+        "CastShadow": true,
+        "Location": [
+            0.12645943462848663,
+            10.838458061218262,
+            -60.91663360595703
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            2.0331997871398926,
+            2.0331997871398926,
+            2.0331997871398926
+        ],
+        "Scripts": [],
+        "UUID": "fd5139ff97166a24",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "met",
+        "parentUUID": "0000000000000000",
+        "path": "temp/packasset/metalball.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            4.266469955444336,
+            0.17062664031982422,
+            -1.437303900718689
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            200.0,
+            1.0,
+            200.0
+        ],
+        "Scripts": [],
+        "UUID": "35c8cf52fadfcd98",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "plane",
+        "parentUUID": "0000000000000000",
+        "path": "Assets/Models/basic shapes 2/plane.gltf",
+        "uvScale": [
+            200.0,
+            200.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            1.8505778312683105,
+            -0.1027611494064331,
+            -58.24641418457031
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.2000000476837158,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "aafcb03ed8738247",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "annaAarch",
+        "parentUUID": "0000000000000000",
+        "path": "temp/annasarch/annaAarch.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            11.784224510192871,
+            9.003988265991211,
+            -57.513343811035156
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            0.550000011920929,
+            0.550000011920929,
+            0.550000011920929
+        ],
+        "Scripts": [],
+        "UUID": "86081b9dc61d2300",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "barrel2",
+        "parentUUID": "0000000000000000",
+        "path": "temp/barrel/barrel2.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -7.517951965332031,
+            2.0055296421051025,
+            -72.9874267578125
+        ],
+        "MaterialPath": "Assets/Material/DefaultWET.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            2.630000114440918,
+            2.630000114440918,
+            2.630000114440918
+        ],
+        "Scripts": [],
+        "UUID": "e3fac727389e1de0",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "stanforddragon.gltf",
+        "parentUUID": "0000000000000000",
+        "path": "temp/stanforddragon/stanforddragon.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            62.0,
+            -0.056728899478912354,
+            0.800000011920929
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            90.0,
+            0.0
+        ],
+        "Scale": [
+            2.0,
+            2.0,
+            2.0
+        ],
+        "Scripts": [],
+        "UUID": "f5dd062337523061",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "annasFence",
+        "parentUUID": "0000000000000000",
+        "path": "temp/annasFence/fence3.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -10.060011863708496,
+            5.229639053344727,
+            -24.14785385131836
+        ],
+        "MaterialPath": "Assets/Material/DefaultWET.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            6.022449016571045,
+            5.179150104522705,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "c3c26fa4cdfe1130",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "reflectivecube",
+        "parentUUID": "0000000000000000",
+        "path": "temp/packasset/reflectivecube.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -31.197999954223633,
+            7.889424800872803,
+            -72.63300323486328
+        ],
+        "MaterialPath": "Assets/Material/DefaultWET.Material",
+        "Rotation": [
+            90.0,
+            180.0,
+            -18.600000381469727
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            0.800000011920929
+        ],
+        "Scripts": [],
+        "UUID": "8a9b0423cb6bc17a",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "rainbowglass",
+        "parentUUID": "0000000000000000",
+        "path": "temp/rainbowglass.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -9.16855239868164,
+            0.32192564010620117,
+            -9.95608901977539
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            20.0,
+            0.3725522756576538,
+            20.0
+        ],
+        "Scripts": [],
+        "UUID": "d91a8fccfdb7a624",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "reflectivecube",
+        "parentUUID": "0000000000000000",
+        "path": "temp/packasset/reflectivecube.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            28.458885192871094,
+            2.488536834716797,
+            -33.29079818725586
+        ],
+        "MaterialPath": "Assets/Material/DefaultWET.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "df9ebb37047b9598",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "rainbowglass",
+        "parentUUID": "0000000000000000",
+        "path": "temp/rainbowglass.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            33.98765182495117,
+            2.488536834716797,
+            -36.944332122802734
+        ],
+        "MaterialPath": "Assets/Material/DefaultWET.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "0936c3ec0644c718",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "rainbowglass",
+        "parentUUID": "0000000000000000",
+        "path": "temp/rainbowglass.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            38.358619689941406,
+            2.488537073135376,
+            -39.91187286376953
+        ],
+        "MaterialPath": "Assets/Material/DefaultWET.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "405b5c2b3dd80a07",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "rainbowglass",
+        "parentUUID": "0000000000000000",
+        "path": "temp/rainbowglass.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            8.089794158935547,
+            1.7722225189208984,
+            12.985515594482422
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            2.1399998664855957,
+            2.1399998664855957,
+            2.1399998664855957
+        ],
+        "Scripts": [],
+        "UUID": "97c200344cc3d43b",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "slope",
+        "parentUUID": "0000000000000000",
+        "path": "Assets/Models/basic shapes/slope.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            43.940406799316406,
+            2.0690853595733643,
+            -42.75621795654297
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "95294181a2c88d82",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "rainbowglass",
+        "parentUUID": "0000000000000000",
+        "path": "temp/rainbowglass.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            10.987184524536133,
+            0.3698604106903076,
+            70.17176055908203
+        ],
+        "MaterialPath": "Assets/Material/DefaultPOM.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            0.699999988079071,
+            0.699999988079071,
+            0.699999988079071
+        ],
+        "Scripts": [],
+        "UUID": "84326aa89cfa8d32",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "urbanwindowless",
+        "parentUUID": "0000000000000000",
+        "path": "temp/annaurban/urbanwindowless.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            15.197365760803223,
+            2.6946990489959717,
+            75.97054290771484
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            0.5700000524520874,
+            3.1019999980926514,
+            2.020112991333008
+        ],
+        "Scripts": [],
+        "UUID": "9ea7dfc9f8941e92",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "cube2",
+        "parentUUID": "0000000000000000",
+        "path": "Assets/Models/basic shapes 2/cube.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            11.971118927001953,
+            6.745667457580566,
+            70.26499938964844
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            90.0
+        ],
+        "Scale": [
+            0.6799999475479126,
+            10.106160163879395,
+            8.208280563354492
+        ],
+        "Scripts": [],
+        "UUID": "9e792daf5c2cba01",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "cube2",
+        "parentUUID": "0000000000000000",
+        "path": "Assets/Models/basic shapes 2/cube.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            18.872652053833008,
+            2.3869099617004395,
+            62.8177375793457
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "d3ab4b89369d3958",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "stanforddragon.gltf",
+        "parentUUID": "0000000000000000",
+        "path": "temp/stanforddragon/stanforddragon.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            17.835281372070313,
+            1.7773888111114502,
+            67.2958984375
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.3600000143051147,
+            1.3600000143051147,
+            1.3600000143051147
+        ],
+        "Scripts": [],
+        "UUID": "1b4fdd2dac2d5fdb",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "FlightHelmet",
+        "parentUUID": "0000000000000000",
+        "path": "temp/FlightHelmet/glTF/FlightHelmet.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -11.511000633239746,
+            3.8106043338775635,
+            -21.404481887817383
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            2.549999952316284,
+            2.549999952316284,
+            2.549999952316284
+        ],
+        "Scripts": [],
+        "UUID": "97b837b023a2d093",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "head",
+        "parentUUID": "0000000000000000",
+        "path": "temp/lpshead/head.OBJ",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            11.154905319213867,
+            2.984104871749878,
+            74.73008728027344
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "0ac45607647db1e0",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "met",
+        "parentUUID": "0000000000000000",
+        "path": "temp/packasset/metalball.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            16.54471206665039,
+            2.1630001068115234,
+            62.855690002441406
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            67.0,
+            0.0
+        ],
+        "Scale": [
+            0.21660000085830688,
+            0.21660000085830688,
+            0.21660000085830688
+        ],
+        "Scripts": [],
+        "UUID": "1d924d2b8a47e49c",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "cat2",
+        "parentUUID": "0000000000000000",
+        "path": "temp/cat2/cat2.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            117.68473052978516,
+            2.842069625854492,
+            -5.482792377471924
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "804007080e3fb0a3",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "poolroom",
+        "parentUUID": "0000000000000000",
+        "path": "temp/poolroom/poolroom.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            0.0,
+            -0.843999981880188,
+            0.0
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            500.0,
+            1.0,
+            500.0
+        ],
+        "Scripts": [],
+        "UUID": "ed9b7e914ce7d3b7",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "cube2",
+        "parentUUID": "0000000000000000",
+        "path": "Assets/Models/basic shapes 2/cube.gltf",
+        "uvScale": [
+            500.0,
+            500.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            19.40929412841797,
+            2.4854559898376465,
+            67.3000259399414
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "12328f3d7b3227d5",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "stanforddragon.gltf",
+        "parentUUID": "0000000000000000",
+        "path": "temp/stanforddragon/stanforddragon.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -31.940380096435547,
+            1.1948411464691162,
+            -51.67690658569336
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "4496c5e29365ef80",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "jarvis",
+        "parentUUID": "0000000000000000",
+        "path": "temp/jarvis/jarvis.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            9.60590648651123,
+            2.8583641052246094,
+            63.37147521972656
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "243500a710ad944f",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "stanforddragon.gltf",
+        "parentUUID": "0000000000000000",
+        "path": "temp/stanforddragon/stanforddragon.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            9.60590648651123,
+            2.8583641052246094,
+            63.37147521972656
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "8059a01ed0e4e300",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "stanforddragon.gltf",
+        "parentUUID": "0000000000000000",
+        "path": "temp/stanforddragon/stanforddragon.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            20.396514892578125,
+            2.3141942024230957,
+            62.86655807495117
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            0.27740001678466797,
+            0.27740001678466797,
+            0.27740001678466797
+        ],
+        "Scripts": [],
+        "UUID": "7d82bf8ad02dcbf6",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "barrel2",
+        "parentUUID": "0000000000000000",
+        "path": "temp/barrel/barrel2.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -15.62585163116455,
+            2.772282600402832,
+            39.42605972290039
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            53.20000076293945,
+            0.0
+        ],
+        "Scale": [
+            3.606799840927124,
+            3.606799602508545,
+            3.606799840927124
+        ],
+        "Scripts": [],
+        "UUID": "b02e8fe3a676083b",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "stanforddragon.gltf",
+        "parentUUID": "0000000000000000",
+        "path": "temp/stanforddragon/stanforddragon.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -25.290678024291992,
+            6.335741996765137,
+            39.52103042602539
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.7999999523162842,
+            1.7999999523162842,
+            1.7999999523162842
+        ],
+        "Scripts": [],
+        "UUID": "bb3693befe920f6f",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "met",
+        "parentUUID": "0000000000000000",
+        "path": "temp/packasset/metalball.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -24.960763931274414,
+            0.5455201864242554,
+            -20.791671752929688
+        ],
+        "MaterialPath": "Assets/Material/ForwardAnimationWeightDBG.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            0.06999999284744263,
+            0.06999999284744263,
+            0.06999999284744263
+        ],
+        "Scripts": [],
+        "UUID": "8f797cfb019996bc",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "doctorrigged",
+        "parentUUID": "0000000000000000",
+        "path": "temp/Ch16_nonPBR.fbx",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            93.93514251708984,
+            22.538654327392578,
+            -2.8259010314941406
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "14618e897ab8c701",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "GItest",
+        "parentUUID": "0000000000000000",
+        "path": "temp/packasset/raytraced/GItest.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    }
+]

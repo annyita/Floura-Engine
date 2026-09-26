@@ -1,0 +1,9 @@
+[
+	{
+		"path": "temp/qt2/waterlayer.gltf",
+		"hasMDF": false,
+		"MDF_thickness": 0.1,
+		"sliceSize": 32,
+		"MDF_Formation": 0
+	}
+]

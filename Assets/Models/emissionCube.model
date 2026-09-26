@@ -1,0 +1,9 @@
+[
+	{
+		"path": "Assets/Models/emissionCube.gltf",
+		"hasMDF": true,
+		"MDF_thickness": 1.0,
+		"sliceSize": 32,
+		"MDF_Formation": 0
+	}
+]

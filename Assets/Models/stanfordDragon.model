@@ -1,0 +1,9 @@
+[
+	{
+		"path": "temp/stanforddragon/stanforddragon.gltf",
+		"hasMDF": true,
+		"MDF_thickness": 1.0,
+		"sliceSize": 64,
+		"MDF_Formation": 0
+	}
+]

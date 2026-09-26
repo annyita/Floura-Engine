@@ -1,0 +1,17 @@
+[
+    {
+        "DepthDistance": 66.0,
+        "DepthPlane": [
+            1.100000023841858,
+            676.0
+        ],
+        "Window": "arch",
+        "doFog": false,
+        "doReflections": true,
+        "fogRGBA": [
+            1.0,
+            1.0,
+            1.0
+        ]
+    }
+]

@@ -1,0 +1,9 @@
+[
+	{
+		"path": "temp/white_oak/white_oak.obj",
+		"hasMDF": true,
+		"MDF_thickness": 0.05,
+		"sliceSize": 128,
+		"MDF_Formation": 0
+	}
+]
