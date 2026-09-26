@@ -5,7 +5,7 @@
 //buffer #1
 unsigned int GeometryPass::depthTexture;
 unsigned int GeometryPass::gBuffer;
-unsigned int GeometryPass::gAlbedoSpec;
+unsigned int GeometryPass::gAlbedo;
 unsigned int GeometryPass::gNormal;
 unsigned int GeometryPass::gSpecular;
 unsigned int GeometryPass::gPosition;
@@ -39,15 +39,15 @@ void GeometryPass::setupGbuffers(unsigned int width, unsigned int height) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
 
-	glGenTextures(1, &gAlbedoSpec);
-	glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+	glGenTextures(1, &gAlbedo);
+	glBindTexture(GL_TEXTURE_2D, gAlbedo);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedo, 0);
 
 	// Create Depth Texture
 	glGenTextures(1, &depthTexture);
@@ -107,7 +107,7 @@ void GeometryPass::cleanupGbuffers(){
 	GLuint texs[] = {
 		gPosition,
 		gNormal,
-		gAlbedoSpec,
+		gAlbedo,
 		depthTexture,
 		gSpecular,
 		gVelocity,
@@ -131,8 +131,8 @@ void GeometryPass::updateGbufferResolution(unsigned int width, unsigned int heig
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 	//glBindTexture(GL_TEXTURE_2D, 0);
 
-	// gAlbedoSpec
-	glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+	// gAlbedo
+	glBindTexture(GL_TEXTURE_2D, gAlbedo);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	//glBindTexture(GL_TEXTURE_2D, 0);
 

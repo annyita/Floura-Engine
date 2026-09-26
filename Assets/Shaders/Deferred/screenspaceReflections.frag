@@ -90,7 +90,7 @@ vec3 BinarySearch(inout vec3 dir, inout vec3 hitCoord, inout float dDepth){
     return vec3(projectedCoord.xy, depth);
 }
 
-float rayThickness = 0.1;
+#define rayThickness 0.1
 
 vec4 RayCast(in vec3 dir, inout vec3 hitCoord, out float dDepth, int maxSteps, out float hit, in float step){
     hitCoord += dir* 0.1;
@@ -156,9 +156,9 @@ vec3 hash33(vec3 src) {
     return uintBitsToFloat(h & 0x007fffffu | 0x3f800000u) - 1.0;
 }
 
-int maxstep = 256;
-float stepsize = 0.4f;
-const float reflectionSpecularFalloffExponent = 3.0;
+#define ssr_maxstep 64
+#define ssr_stepsize 1.0f
+#define ssr_reflectionSpecularFalloffExponent 3.0f
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0) { return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0); }
 
@@ -211,7 +211,7 @@ vec4 ssr(vec3 ARM, vec3 position, vec3 normal, int maxSteps, float step, highp v
 
         float screenEdgefactor = clamp(1.0 - (dCoords.x + dCoords.y), 0.0, 1.0);
 
-        float ReflectionMultiplier = pow(Metallic, reflectionSpecularFalloffExponent) *
+        float ReflectionMultiplier = pow(Metallic, ssr_reflectionSpecularFalloffExponent) *
         screenEdgefactor *
         -R.z;
 
@@ -219,7 +219,6 @@ vec4 ssr(vec3 ARM, vec3 position, vec3 normal, int maxSteps, float step, highp v
         return vec4(clamp(SSR,0.0, 1.0), ReflectionMultiplier);//Metallic
     }
     return vec4(0.0);
-
 }
 
 // (thanks learnopengl)
@@ -244,8 +243,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
     return ggx1 * ggx2;
 }
 
-vec3 metRough(vec3 albedo, vec3 iNormal, vec3 viewVector, out vec3 nFer, out float nMet, out vec3 irradiance, vec3 ARM)
-{
+vec3 metRough(vec3 albedo, vec3 iNormal, vec3 viewVector, out vec3 nFer, out float nMet, out vec3 irradiance, vec3 ARM){
     // textures
     vec3 metallicRoughness = ARM; // metalic
     float rough = metallicRoughness.g; // g
@@ -352,7 +350,7 @@ void main(){
         return;
     }
 
-    if (doSSR) reflections = ssr(ARM, position, normal, maxstep, stepsize, velocity);
+    if (doSSR) reflections = ssr(ARM, position, normal, ssr_maxstep, ssr_stepsize, velocity);
 
     vec3 specular = vec3(0.0f);
     vec3 diffuse  = vec3(0.0f);

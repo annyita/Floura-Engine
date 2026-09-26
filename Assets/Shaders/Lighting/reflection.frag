@@ -64,9 +64,11 @@ uniform float FarPlane;
 uniform vec3 camPositon;
 
 uniform bool doBinaryAlpha;
+uniform int drawIndex;
+uniform int meshIndex;
+uniform int totalDrawCount;
 
-float linearizeDepth(float depth, float NP, float FP)
-{
+float linearizeDepth(float depth, float NP, float FP){
 	return (2.0 * NP * FP) / (FP + NP - (depth * 2.0 - 1.0) * (FP - NP));
 }
 
@@ -77,15 +79,13 @@ float random(vec3 seed) {
 	return fract(sin(dot_product) * 43758.5453);
 }
 
-float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal)
-{
+float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal){
 	// perform perspective divide
 	vec3 lightCoords = LightSpacePos.xyz / LightSpacePos.w;
 	float shadow = 0.0f;
 
 	// shadow calculation
-	if (lightCoords.z <= 1.0f)
-	{
+	if (lightCoords.z <= 1.0f){
 		// transform to [0,1] range
 		lightCoords = (lightCoords + 1.0f) / 2.0f;
 		// get the current depth
@@ -100,10 +100,8 @@ float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal)
 		//vec2 pixelSize = (float(NumberOfSamples) * 0.1) / textureSize(shadowMap, 0);
 		vec2 noiseUV = vec2(gl_FragCoord.xy) / vec2(textureSize(bluemap, 0));
 		vec2 pixelSize = 1.0 / textureSize(shadowMap, 0);
-		for(int y = -sampleRadius; y <= sampleRadius; y++)
-		{
-		    for(int x = -sampleRadius; x <= sampleRadius; x++)
-		    {
+		for(int y = -sampleRadius; y <= sampleRadius; y++){
+		    for(int x = -sampleRadius; x <= sampleRadius; x++){
 					float angle = texture(bluemap, noiseUV).r * NumberOfSamples;
 					vec2 offset = vec2(cos(angle), sin(angle));
 
@@ -122,8 +120,7 @@ float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal)
 return shadow;
 }
 
-vec4 direcLight()
-{ // normals need to be recalculated based on rotation
+vec4 direcLight(){ // normals need to be recalculated based on rotation
 	vec3 normal = normalize(Normal); 
 
 	vec3 lightDirection = normalize(directLightPos); //vec3(1.0f, 1.0f, 0.0f)
@@ -140,8 +137,7 @@ vec4 direcLight()
 	return ((diffuse * (1.0f - shadow) + directAmbient)) * vec4(directLightCol, 1.0f);
 }
 
-vec4 pointLight(int iteration)
-{	
+vec4 pointLight(int iteration){	
 	vec4 finalColour = vec4(0.0f);
 
 	
@@ -169,8 +165,7 @@ vec4 pointLight(int iteration)
 	return finalColour;
 }
 
-vec4 spotLight(int iteration)
-{
+vec4 spotLight(int iteration){
 	// controls how big the area that is lit up is
 	float outerCone = 0.90f;
 	float innerCone = 0.95f;
@@ -201,10 +196,8 @@ vec4 lights(int lodcount, float linearizedDepth){
     //return (diffuseTex * skyColor);
 	int maxLights = 64;
 	
-	if (lodcount != 2)
-	{
-		if (lodcount == 1 && linearizedDepth < 50.0f)
-		{
+	if (lodcount != 2){
+		if (lodcount == 1 && linearizedDepth < 50.0f){
 			for (int i = 0; i < min(lightCount, maxLights); i++)
 				{
 					if (Lights[i].type == 0){
@@ -221,8 +214,7 @@ vec4 lights(int lodcount, float linearizedDepth){
 	//return finalColour;
 		//FragColor = direcLight(); doDirLight
 
-	if (doDirLight) // if direct light is enabled, add it to the final color
-	{
+	if (doDirLight){// if direct light is enabled, add it to the final color
 		finalColour += direcLight();
 	}
 
@@ -234,16 +226,18 @@ vec4 lights(int lodcount, float linearizedDepth){
 
 
 // looks best on glass and solids
-void BayerNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (could fade out near farplane or nearplane)
-{
+void BayerNoiseOpacity(float Threshold){// for fade out or opacity (cheap) (could fade out near farplane or nearplane)
 	sampler2D baySamp = sampler2D(bayerMatrixHandle);
+	
 	vec2 bayUV = vec2(gl_FragCoord.xy) / vec2(textureSize(baySamp, 0)); // new uvec2
 
 	float scrollSpeed = 0.5;
 
+	//int nFrame = drawIndex + meshIndex;
+	int nFrame = totalDrawCount;
+	vec2 offset = vec2(fract(nFrame * 0.618), fract(nFrame * 0.133));
 	//bayUV = fract(bayUV + (scrollSpeed * time));
-
-	float bayer = texture(baySamp, bayUV).r;
+	float bayer = texture(baySamp, bayUV + offset).r;
 
 
 	float clampedThreshold = clamp(Threshold, 0.2, 1.0);
@@ -253,27 +247,18 @@ void BayerNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (coul
 }
 int lodcount = 0;
 
-void main()
-{
+void main(){
 	float linearizedDepth = linearizeDepth(gl_FragCoord.z, NearPlane, FarPlane);
 	//early z cutoff
 	if (linearizedDepth > FarPlane)
 	discard;
 	if (lodcount == 3) {FragColor = vec4(0.0f); return;};
-
-	float mipmapfactor = 1.0;
-
-	if (lodcount == 0) mipmapfactor = 0.5f;
-	if (lodcount == 1) mipmapfactor = 0.7f;
-
-		
+	
 	sampler2D difusesamp = sampler2D(texture_diffuse_Handle);
 
 	//int lastLOD = textureQueryLevels(difusesamp) - 1;
 
 	//float maxLod = lastLOD;
-
-	//float lod = mipmapfactor * maxLod; 
 
 	//lod = min(lod, maxLod); 
 

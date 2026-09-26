@@ -17,6 +17,7 @@
 #include "Render/Handler/LoadHandler.h"
 #include "Systems/general/jobClass.h"
 #include "argumentHandler.h"
+#include <Render/pipeline/prebuilt_pipelines/swrt.h>
 
 bool Main::sleepState = true;
 bool Main::lockGameThread = false; // big no rn holds renderer
@@ -86,7 +87,7 @@ void Main::gameLoop(GLFWwindow* window){
 		getAjob::onBeginningOfGameThread();
 		// cam
 		Scene::maincamera.saveLastMaticies();
-		Scene::maincamera.updateHaltonJitter(); // jitter
+		Scene::maincamera.updateHaltonJitter(RenderClass::jitterFactor); // jitter
 		Scene::maincamera.Inputs(windowHandler::window, TimeUtil::deltatime);
 		Scene::maincamera.updateMatrix(); // Update: fov, near and far plane
 		Scene::maincamera.applyJitter = RenderClass::doTAA; // apply to projection matrix
@@ -102,10 +103,15 @@ void Main::gameLoop(GLFWwindow* window){
 		FE_LAYER::Update();
 		
 		Player::update();
+		
+		// should only do this when swrt is on
+		FlouraSWRT::update();
 		// render
 		//LoadHandler::updateFromOpenGLThread(); // for the opengl specific stuff that cant run on the other threads to-do with loading
 		
 		RenderClass::Render(windowHandler::window, windowHandler::width, windowHandler::height);
+		
+		ProbeHandler::dirtyScene = false;
 	}
 	
 	glfwMakeContextCurrent(nullptr);

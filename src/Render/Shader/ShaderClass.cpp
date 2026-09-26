@@ -210,8 +210,7 @@ void Shader::LoadShaderGeom(const char* vertexFile, const char* fragmentFile, co
 
 }
 
-void Shader::LoadComputeShader(const char* computeFile)
-{
+void Shader::LoadComputeShader(const char* computeFile){
     
     GLuint computeShader = glCreateShader(GL_COMPUTE_SHADER);
     

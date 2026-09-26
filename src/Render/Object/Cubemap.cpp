@@ -5,8 +5,7 @@
 Cubemap::Cubemap() {
 }
 
-void Cubemap::loadCubeMap(std::string path)
-{
+void Cubemap::loadCubeMap(std::string path){
 	//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 	Cubemap::path = path;
@@ -75,9 +74,6 @@ void Cubemap::loadCubeMap(std::string path)
 			);
 
 			stbi_image_free(data);
-
-
-
 		}
 		else{
 			LogConsole::print("Failed to load texture: " + facesCubemap[i]);
@@ -116,8 +112,7 @@ void Cubemap::cubemapToShader(Shader& shader, int unit)
 	shader.setInt("skybox", unit);
 }
 
-void Cubemap::cubemapToUUIDShader(const char* uniform, Shader & shader)
-{
+void Cubemap::cubemapToUUIDShader(const char* uniform, Shader & shader){
 	shader.Activate();
 	shader.setHandleui64ARB(uniform, handle); // guess im keeping this weird capital underscore naming convension
 }

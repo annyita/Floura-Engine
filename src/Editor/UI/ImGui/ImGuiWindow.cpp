@@ -14,6 +14,8 @@
 #include "ImGuiInclude/EcsInspector.h"
 #include "Render/pipeline/prebuilt_pipelines/depreciated/denoise.h"
 #include <Systems/util/relationshipManager.h>
+
+#include "Render/Handler/RenderHandler.h"
 #include  "Render/pipeline/prebuilt_pipelines/dbgPass.h"
 #include "Render/Handler/UniformManager.h"
 #include  "Render/pipeline/prebuilt_pipelines/swrt.h"
@@ -397,7 +399,7 @@ void FEImGuiWindow::Update() {
 	ImGui::Render(); // Renders the ImGUI elements
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
-static const char* rendererItems[]{ "None","Deferred", "Forward", "SWRT OLD (deprecated soon)", "SWRT"};
+static const char* rendererItems[]{ "None","Deferred", "Forward", "SWRT"};
 void FEImGuiWindow::menuwindow()
 {
 	ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -568,23 +570,31 @@ void FEImGuiWindow::RenderWindow() {
 	//RenderClass::doTAA
 	if (ImGui::TreeNode("Anti Aliasing & Post")) {
 		ImGui::Checkbox("doTAA", &RenderClass::doTAA);
+		ImGui::DragFloat("Jitter Factor", &RenderClass::jitterFactor);
 		ImGui::DragFloat("post sharpness", &renderTarget::sharpness);
 		
-		ImGui::TreePop();// Ends The ImGui Window
+		ImGui::TreePop();
 	}
-	if (RenderClass::currentRendererInd == RenderClass::SWRT2){
+	if (RenderClass::currentRendererInd == RenderClass::SWRT){
 		if (ImGui::TreeNode("Raytracer")) {
-			ImGui::DragInt("Resolution Scale Factor", &FlouraSWRT::resScaleFactor);
+			ImGui::DragFloat("Resolution Scale Factor", &FlouraSWRT::resScaleFactor);
+			
+			if (ImGui::TreeNode("ray world")){
+				// figures users might abuse this slider too much so i limited it, but i like extremes so i left it high
+				ImGui::DragInt("Auto MDF Res (force)", &FlouraSWRT::autoMDFres, 1.0, 1, 8192);
+				ImGui::TreePop();
+			}
 			if (ImGui::TreeNode("denoising")){
 				ImGui::Checkbox("doDenoiseSplitDBGView", &FlouraSWRT::doDenoiseSplitDBGView);
 				ImGui::Spacing();
 				ImGui::Checkbox("doTemporalAccumulation", &FlouraSWRT::doTemporalAccumulation);
 				ImGui::DragFloat("temporalAccumulationBlendFactor",&FlouraSWRT:: temporalAccumulationBlendFactor);
+				ImGui::SliderInt("svgf passes", &FlouraSWRT::passNum, 1, 5);
 				ImGui::Checkbox("doSVGF", &FlouraSWRT::doSVGF);
 					
-				ImGui::TreePop();// Ends The ImGui Window
+				ImGui::TreePop();
 			}
-			ImGui::TreePop();// Ends The ImGui Window
+			ImGui::TreePop();
 		}
 	}
 
@@ -968,7 +978,7 @@ void FEImGuiWindow::HierarchyList() { // have size of icons increase with window
 	ImGui::EndChild();
 	ImGui::Separator();
 	ImGui::BeginChild("Objects", ImVec2(0, 0), false);
-
+	
 	ImGui::Text("Constant Objects:");
 	//cameraIcon
 	ImGui::Image(
@@ -1017,9 +1027,9 @@ void FEImGuiWindow::HierarchyList() { // have size of icons increase with window
 		FEImGuiWindow::SelectedObjectIndex = 0;
 	}
 	ImGui::NewLine();
-
+	ImGui::Text(("Entities: " + std::to_string(Scene::entityObjects.size())).c_str());
 	ImGui::Text("Objects:");
-
+	
 	// entity model, bb, empty
 	for (size_t i = 0; i < Scene::entityObjects.size(); i++)
 	{

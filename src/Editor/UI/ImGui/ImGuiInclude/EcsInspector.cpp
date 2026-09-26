@@ -111,7 +111,6 @@ void EcsInspector::ModelWindow() {
 		ImGui::Checkbox("Draw Instanced", &Scene::entityObjects[FEImGuiWindow::SelectedObjectIndex]->component.render.drawInstanced);
 		ImGui::Checkbox("Cast Shadow", &Scene::entityObjects[FEImGuiWindow::SelectedObjectIndex]->component.flags.castsShadow);
 		ImGui::DragFloat2("UV Scale", &Scene::entityObjects[FEImGuiWindow::SelectedObjectIndex]->component.systems.material.uvScale.x);
-		ImGui::DragFloat("reflective smoothness", &Scene::entityObjects[FEImGuiWindow::SelectedObjectIndex]->component.render.smoothnessValue);
 
 		
 		if (ImGui::TreeNode("Meshes")) {

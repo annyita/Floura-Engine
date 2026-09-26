@@ -246,7 +246,7 @@ void rtFinalUnifroms(){
 	
 
 	renderTarget::frameBufferProgram.setTexture2D("depthTexture", 1 ,GeometryPass::depthTexture);
-	renderTarget::frameBufferProgram.setTexture2D("albedo", 2, GeometryPass::gAlbedoSpec);
+	renderTarget::frameBufferProgram.setTexture2D("albedo", 2, GeometryPass::gAlbedo);
 	renderTarget::frameBufferProgram.setTexture2D("normal", 3, GeometryPass::gNormal);
 	renderTarget::frameBufferProgram.setTexture2D("dbgColour", 10, dbgPass::dbgColour);
 	//dbgPass

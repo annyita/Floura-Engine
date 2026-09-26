@@ -52,8 +52,10 @@ vec4 indirectWaveletDenoise(sampler2D inputSampler, sampler2D variance, int chan
     float cLuma = lumaFromRGB(colour);
 
     //float sigmaDepth = 0.05f;
-    float sigmaPos = 0.5; //  0.05
+    float sigmaPos = 0.05; //  0.05
     float sigmaNormal = 0.2; // 0.2;
+    //float sigmaPos = 1.0; //  0.05
+    //float sigmaNormal = 1.0; // 0.2;
     
     vec3 sumColour = vec3(0.0f);
     float sumWeight = 0.0f;

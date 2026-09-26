@@ -5,7 +5,7 @@
 #include <Render/Buffer/VBO.h>
 #include <Render/Object/texture3D.h>
 #include <Systems/Physics/Collision.h>
-#include <Systems/Physics/BVH.h>
+#include <Systems/Physics/accelerate.h>
 #include "Render/Object/Texture.h"
 #include <Render/Object/Mesh.h>
 class voxelizer
@@ -13,25 +13,26 @@ class voxelizer
 public:
     
     // do voxelization with texture3D now as a demo. then later try the gpu rasterizer
-    static void bakeMeshVXGAccel(std::vector<Vertex> &vertices, std::vector<BVH::BVH_primitive>& prims, Collision::AABB root, const int sliceSize,
+    static void bakeMeshVXGAccel(std::vector<Vertex> &vertices, std::vector<accelerate::BVH_primitive>& prims, Collision::AABB root, const int sliceSize,
         Texture3D& texture, GLuint slot, std::vector<Texture>& textures);
-    static void bakeMeshVXGAccel(std::vector<Vertex> &vertices, std::vector<BVH::leaf>& leaves, Collision::AABB root, const int sliceSize, 
+    static void bakeMeshVXGAccel(std::vector<Vertex> &vertices, std::vector<accelerate::leaf>& leaves, Collision::AABB root, const int sliceSize, 
         Texture3D& texture, GLuint slot, std::vector<Texture>& textures);
     
     static void bakeMeshVXGAccelMeshPrims(std::vector<Mesh*> &meshes, std::vector<glm::mat4>& transforms, Collision::AABB root, const int sliceSize,
     Texture3D& texture, GLuint slot);
     
     
-    static glm::vec4 VoxelizeMeshVXG(std::vector<Vertex> &vertices, std::vector<BVH::BVH_primitive>& prims, glm::vec3& P, glm::vec3& S, 
+    static glm::vec4 VoxelizeMeshVXG(std::vector<Vertex> &vertices, std::vector<accelerate::BVH_primitive>& prims, glm::vec3& P, glm::vec3& S, 
         std::vector<Texture>& textures);  // BVH PRIM
     static glm::vec4 VoxelizeMeshVXG(std::vector<Vertex> &vertices,
-        std::vector<BVH::leaf>& leaves, glm::vec3& P, glm::vec3& S, std::vector<Texture>& textures);  // KD
-    static glm::vec4 VoxelizeMeshVXGmeshPrims(std::vector<std::vector<Vertex>> &vertices, std::vector<std::vector<BVH::BVH_primitive>>& prims, glm::vec3& P, glm::vec3& S, 
+        std::vector<accelerate::leaf>& leaves, glm::vec3& P, glm::vec3& S, std::vector<Texture>& textures);  // KD
+    static glm::vec4 VoxelizeMeshVXGmeshPrims(std::vector<std::vector<Vertex>> &vertices, std::vector<std::vector<accelerate::BVH_primitive>>& prims, glm::vec3& P, glm::vec3& S, 
     std::vector<std::vector<Texture>>& textures);  // BVH PRIM
     
     static void cacheVXG(const char* path, int hash, std::vector<Texture3D *>& meshSDFs);
     
-    
+    // oct style here
+    static void octSplitEmptySpace(std::vector<Collision::AABB>& aabbs, glm::vec3& p, glm::vec3& e, int iter);
     
     
     // kd style down here

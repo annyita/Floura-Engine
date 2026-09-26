@@ -52,6 +52,10 @@ uniform float NearPlane;
 uniform float FarPlane;
 
 uniform vec3 camPos;
+uniform sampler2D ripplesHandle;
+uniform int drawIndex;
+uniform int meshIndex;
+uniform int totalDrawCount;
 
 
 vec3 CalcNewNormal(vec2 texcoords) //pomCoords
@@ -88,13 +92,13 @@ float random(vec3 seed) {
 }
 
 // looks best on decals and foliage
-void blueNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (could fade out near farplane or nearplane)
-{
+void blueNoiseOpacity(float Threshold){// for fade out or opacity (cheap) (could fade out near farplane or nearplane)
 	sampler2D bluemap =sampler2D(BlueNoiseHandle) ;
 	vec2 texSize = vec2(textureSize(bluemap, 0));
 
-	vec2 offset = vec2(0.0,0.0);
-	if (animateBinaryAlpha) offset = vec2(fract(frame * 0.618), fract(frame * 0.133));
+	int nFrame = totalDrawCount;
+	if (animateBinaryAlpha)  nFrame += frame;
+	vec2 offset = vec2(fract(nFrame * 0.618), fract(nFrame * 0.133));
 
 	vec2 noiseUV = (gl_FragCoord.xy / texSize) + offset;
 
@@ -106,18 +110,15 @@ void blueNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (could
 	if (noise > Threshold) discard;
 }
 
-// looks best on glass and solids
-void BayerNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (could fade out near farplane or nearplane)
-{
+void BayerNoiseOpacity(float Threshold){
 	sampler2D baySamp = sampler2D(bayerMatrixHandle);
-	vec2 bayUV = vec2(gl_FragCoord.xy) / vec2(textureSize(baySamp, 0)); // new uvec2
-	
-	float scrollSpeed = 0.5;
-	
-	//bayUV = fract(bayUV + (scrollSpeed * time));
-	
+	vec2 texSize = vec2(textureSize(baySamp, 0));
+
+	int nFrame = totalDrawCount;
+	vec2 offset = vec2(fract(nFrame * 0.618), fract(nFrame * 0.133));
+	vec2 bayUV = (gl_FragCoord.xy / texSize) + offset;
 	float bayer = texture(baySamp, bayUV).r;
-	
+
 
 	float clampedThreshold = clamp(Threshold, 0.2, 1.0);
 
@@ -125,8 +126,7 @@ void BayerNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (coul
 	if (bayer > Threshold) discard;
 }
 
-bool boolBayerNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (could fade out near farplane or nearplane)
-{
+bool boolBayerNoiseOpacity(float Threshold){
 	sampler2D baySamp = sampler2D(bayerMatrixHandle);
 	vec2 bayUV = vec2(gl_FragCoord.xy) / vec2(textureSize(baySamp, 0)); // new uvec2
 
@@ -147,14 +147,13 @@ bool boolBayerNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (
 
 float linearizeDepth(float depth, float NP, float FP) { return (2.0 * NP * FP) / (FP + NP - (depth * 2.0 - 1.0) * (FP - NP)); }
 
-float heightScale = 0.1;
+float heightScale = 0.05;
 bool invertPOM = true;
 float minLayers = 8.0;
-float maxLayers = 32.0;
+float maxLayers = 64.0;
 float POMfadeDistance = 30.0f;
 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir, sampler2D heightsamp, float scale) {
-	
 	float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
 
 	float layerDepth = 1.0 / numLayers;
@@ -197,8 +196,7 @@ float calcPOMdepth(vec3 gp){
 	return ndcDepth * 0.5 + 0.5;
 }
 
-void main()
-{
+void main(){
 	sampler2D nSamp = sampler2D(texture_normal_Handle);
 
 	mat3 worldToTangent = transpose(mat3(normalize(Tangent0), normalize(Bitangent0), normalize(Normal0)));
@@ -260,7 +258,7 @@ void main()
 	else displacement = texture(nSamp, pomCoords).a; // Fetch normal from texture
 	
 	vec3 wpos = crntPos - (normalize(Normal0) * (1.0 - displacement) * heightScale);
-	gPosition = wpos;
+	gPosition.rgb = wpos;
 	
 	//albedoTex.r = displacement;
 	

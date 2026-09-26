@@ -33,23 +33,18 @@ int raytracer::maxAccumulatedFrames = 32;
 bool raytracer::doAccumulate = true;
 bool raytracer::resetAccumulationOnDirty = true;
 
-void raytracer::reloadSceneToRaytracer()
-{
+void raytracer::reloadSceneToRaytracer(){
 	clearRaytracerData();
 	uploadSceneToRaytracer();
 }
 
-void raytracer::uploadSceneToRaytracer()
-{
+void raytracer::uploadSceneToRaytracer(){
 	raytracer::RTGlobalTransformFlag = true;
-	for (size_t i = 0; i < Scene::entityObjects.size(); i++)
-	{
+	for (size_t i = 0; i < Scene::entityObjects.size(); i++){
 		int index = RenderHandler::fetchModelIndex(Scene::entityObjects[i]->component.render.renderID);
-		if (index != -1)
-		{
+		if (index != -1){
 			uint64_t instanceUUID = Scene::entityObjects[i]->component.render.instanceUUID;
-			for (size_t x = 0; x < SceneDescription::modelArray.size(); x++)
-			{
+			for (size_t x = 0; x < SceneDescription::modelArray.size(); x++){
 				if (SceneDescription::modelArray[x].harddata.rayModel.instanceUUID == instanceUUID)
 					continue;
 			}
@@ -60,16 +55,13 @@ void raytracer::uploadSceneToRaytracer()
 	}
 }
 
-void raytracer::clearRaytracerData()
-{
+void raytracer::clearRaytracerData(){
 	SceneDescription::modelArray.clear();
 	SceneDescription::UpdateModelBuffer();
 	SceneDescription::updateQuickModelData();
 }
 
-void raytracer::uploadToRaytracer(uint64_t instanceUUID)
-{
-
+void raytracer::uploadToRaytracer(uint64_t instanceUUID){
 	uint64_t RenderUUID = RenderHandler::findRenderUUIDwIstanceUUID(instanceUUID);
 	int index = RenderHandler::fetchModelIndex(RenderUUID);
 	if (index != -1){

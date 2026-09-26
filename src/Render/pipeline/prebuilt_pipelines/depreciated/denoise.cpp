@@ -86,7 +86,7 @@ void denoiser::render() {
 
 	// albedo spec
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, GeometryPass::gAlbedoSpec);
+	glBindTexture(GL_TEXTURE_2D, GeometryPass::gAlbedo);
 	denoiseCompute.setInt("gAlbedoSpec", 3);
 
 	glActiveTexture(GL_TEXTURE5);

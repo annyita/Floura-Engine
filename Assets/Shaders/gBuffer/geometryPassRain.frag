@@ -43,6 +43,9 @@ uniform bool doBinaryAlpha;
 uniform bool animateBinaryAlpha;
 
 uniform float time;
+uniform sampler2D ripplesHandle;
+uniform sampler2D dropletsHandle;
+uniform sampler2D puddlesHandle;
 uniform int drawIndex;
 uniform int meshIndex;
 uniform int totalDrawCount;
@@ -69,6 +72,7 @@ vec3 CalcNewNormal(vec3 normal){
 }
 
 float random(vec3 seed) {
+
 	vec4 seed4 = vec4(seed, 1.0);
 	float dot_product = dot(seed4, vec4(12.9898, 78.233, 45.164, 94.673));
 	return fract(sin(dot_product) * 43758.5453);
@@ -79,10 +83,11 @@ void blueNoiseOpacity(float Threshold){ // for fade out or opacity (cheap) (coul
 	sampler2D bluemap =sampler2D(BlueNoiseHandle) ;
 	vec2 texSize = vec2(textureSize(bluemap, 0));
 
+	//vec2 offset = vec2(0.0,0.0);
+	//int nFrame = frame + drawIndex + meshIndex;
 	int nFrame = totalDrawCount;
 	if (animateBinaryAlpha)  nFrame += frame;
 	vec2 offset = vec2(fract(nFrame * 0.618), fract(nFrame * 0.133));
-
 	vec2 noiseUV = (gl_FragCoord.xy / texSize) + offset;
 
 	
@@ -91,6 +96,50 @@ void blueNoiseOpacity(float Threshold){ // for fade out or opacity (cheap) (coul
 	
 	// normal ranges should be 0.0f-1.0f;
 	if (noise > Threshold) discard;
+}
+
+void BayerNoiseOpacity(float Threshold){
+	sampler2D baySamp = sampler2D(bayerMatrixHandle);
+	vec2 texSize = vec2(textureSize(baySamp, 0));
+
+	int nFrame = totalDrawCount;
+	vec2 offset = vec2(fract(nFrame * 0.618), fract(nFrame * 0.133));
+	vec2 bayUV = (gl_FragCoord.xy / texSize) + offset;
+	float bayer = texture(baySamp, bayUV).r;
+
+
+	float clampedThreshold = clamp(Threshold, 0.2, 1.0);
+
+	// normal ranges should be 0.0f-1.0f;
+	if (bayer > Threshold) discard;
+}
+
+vec4 triplanarMap(sampler2D fTexture, sampler2D wTexture, vec3 position, vec3 normal, vec2 offset, vec2 zoom){
+	vec2 uvX = position.zy / zoom;
+	vec2 uvY = position.xz / zoom;
+	vec2 uvZ = position.xy / zoom;
+
+	vec4 tX =texture(wTexture, uvX + offset);
+	vec4 tY =texture(fTexture, uvY + offset);
+	vec4 tZ =texture(wTexture, uvZ + offset);
+
+	vec3 blendedWeights = abs(normal);
+	blendedWeights = pow(blendedWeights, vec3(4.0));
+	blendedWeights /= (blendedWeights.x + blendedWeights.y + blendedWeights.z);
+	return tX * blendedWeights.x + tY * blendedWeights.y + tZ * blendedWeights.z;
+}
+
+float triplanarPuddles(vec3 position, vec3 normal, vec2 offset, vec2 zoom){
+	vec2 uvY = position.xz / zoom;
+
+	float tX = -1.0f;
+	float tY =texture(puddlesHandle, uvY + offset).r;
+	float tZ = -1.0f;
+
+	vec3 blendedWeights = abs(normal);
+	blendedWeights = pow(blendedWeights, vec3(4.0));
+	blendedWeights /= (blendedWeights.x + blendedWeights.y + blendedWeights.z);
+	return tX * blendedWeights.x + tY * blendedWeights.y + tZ * blendedWeights.z;
 }
 
 void main(){
@@ -117,10 +166,10 @@ void main(){
     discard;
 
 	if (doBinaryAlpha) blueNoiseOpacity(albedoTex.a);
+	//BayerNoiseOpacity(albedoTex.a);
 
 	gPosition.rgb = crntPos; // Output position as-is
 	vec3 normal = CalcNewNormal(texture(nSamp, texCoord).xyz);
-	//vec3 normal = CalcNewNormal(vec3(0.5, 0.5, 1.0));
 	//gNormal.rgb = normal;
 	gNormal.a = texture(nSamp, texCoord).a; // Fetch normal from texture
 	gNormal.rgb = normal;
@@ -133,6 +182,22 @@ void main(){
 	gSpecular = texture(sSamp, texCoord);
 	//gSpecular.rgb = vec3(1.0f);
 	//gVelocity = vec4(vec3(1.0, 0.0, 0.0), 1.0);
+
+	float puddle = max(triplanarPuddles(crntPos, normal, vec2(0.0), 
+			vec2(30.0)), triplanarPuddles(crntPos, normal, vec2(2.0), vec2(10.0)));
+	if (puddle < 0.9){
+		vec3 rippleNormal = CalcNewNormal(triplanarMap(ripplesHandle, dropletsHandle, crntPos, normal, vec2(0.0), vec2(1.0, -1.0) * 1).rgb);
+		
+		if (puddle == -1.0){
+			gNormal.rgb = rippleNormal;
+			gSpecular.rgb = vec3(1.0, 0.0, 1.0);
+		}
+		else{
+			gNormal.rgb = mix(normal, rippleNormal, puddle);
+			gSpecular.rgb = mix(gSpecular.rgb, vec3(1.0, 0.0, 1.0), puddle);
+		}
+	}
+	
 	
 	vec3 emission = texture(sampler2D(texture_emission_Handle), texCoord).rgb;
 	gEmission = emission;

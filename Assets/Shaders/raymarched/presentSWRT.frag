@@ -53,7 +53,6 @@ uniform int lightCount;
 // temp fields
 float specularLight = 0.50f;
 
-
 float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal, vec3 iPosition){
     // perform perspective divide
     vec3 lightCoords = LightSpacePos.xyz / LightSpacePos.w;
@@ -108,11 +107,10 @@ vec4 direcLight(vec3 ARM, vec3 iNormal, vec3 iPosition){ // normals need to be r
     //float rmShadow = 0.0f;
     float ssShadow = 0.0f;
     if (doDirShadowMap) shadow = CalcShadowFactorDIR(fragPosLight, lightDirection, normal, iPosition);
-    //float fAmbient = directAmbient * ARM.r;
-    float specularFactor = 1.0;
+    
     float specular = 0.0f;
     if (doReflect && doDirSpecularLight && diffuse != 0.0f){
-        //return (vec4( vec3(1.0 , 0.0, 0.0), 1.0));
+        float specularFactor = ARM.g;
 
         vec3 reflectionDirection = reflect(-lightDirection, normal);
         vec3 viewDirection = normalize(cameraPosition - iPosition);
@@ -148,10 +146,11 @@ vec4 spotLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition){
     float inten = clamp( (angle - outerCone) / (innerCone - outerCone), 0.0f, 1.0);
 
     float shadow = 0.0;
-
+    
     float specular = 0.0f;
-    if (doReflect && diffuse != 0.0f){
-
+    if (doReflect && diffuse != 0.0f){ 
+        float specularFactor = ARM.g;
+        
         // specular lighting
         //float specularLight = 0.50f;
         vec3 viewDirection = normalize(cameraPosition - iPosition);
@@ -162,8 +161,7 @@ vec4 spotLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition){
         float specAmount = pow(max(dot(normal, halfwayVec), 0.0f), 16);
         specular = specAmount * specularLight;
 
-        finalColour = finalColour + ((diffuse * (1.0f - shadow) * inten + 0.0f) + ARM.b * specular * (1.0f - shadow) * inten) * vec4(Lights[iteration].colour, 1.0) * inten;
-
+        finalColour = finalColour + ((diffuse * (1.0f - shadow) * inten + 0.0f) + specularFactor * specular * (1.0f - shadow) * inten) * vec4(Lights[iteration].colour, 1.0) * inten;
     }
     else{
 
@@ -202,6 +200,8 @@ vec4 pointLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition){
 
     float specular = 0.0f;
     if (doReflect && diffuse != 0.0f){
+        float specularFactor = ARM.g;
+        
         // specular lighting
         //float specularLight = 0.50f;
         vec3 viewDirection = normalize( cameraPosition - iPosition);
@@ -212,7 +212,7 @@ vec4 pointLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition){
         float specAmount = pow(max(dot(normal, halfwayVec), 0.1f), 16);
         specular = specAmount * specularLight;
 
-        finalColour = finalColour + ((diffuse * (1.0f - shadow)* inten + 0.0f) +ARM.b * specular * (1.0f - shadow)* inten) * vec4(Lights[iteration].colour, 1.0 ) * inten;
+        finalColour = finalColour + ((diffuse * (1.0f - shadow)* inten + 0.0f) + specularFactor * specular * (1.0f - shadow)* inten) * vec4(Lights[iteration].colour, 1.0 ) * inten;
     }
     else{
         finalColour = finalColour + ( (diffuse * (1.0f - shadow) * inten + 0.0f) * vec4(Lights[iteration].colour, 1.0) * inten);
@@ -254,6 +254,8 @@ vec3 calculateFog(float near, float far, float steepness, float depthDistance, f
     return colour * (1.0f - logisticizedDepth) + vec3(logisticizedDepth * vec3(fogColour)); // fog
 }
 
+vec3 fresnelSchlick(float cosTheta, vec3 F0) { return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0); }
+
 void main(){
     float gdepth = texture2D(depthMap, texCoord).r;
     vec3 galbedo = texture(gAlbedoSpec, texCoord).rgb;
@@ -264,21 +266,34 @@ void main(){
     vec3 indirect = texture(dIndirect, texCoord).rgb;
     vec3 emission = texture(dEmission, texCoord).rgb;
     
+    //float far = 500.0f;
+    //vec3 blurredIndirect = edgeAwareBoxBlur(dIndirect, indirect, linearizeDepth(gdepth, 0.1f, far), gnrm, far, 3);
     vec3 direct = lights(garm, gnrm, gp).rgb;
-    vec3 final = (direct + indirect) + reflect + emission;
+    vec3 gi = (direct + indirect);
+    vec3 final = gi + reflect + emission;
     
     if (gdepth >= 0.99999) { final = vec3(1.0f);}
     vec3 combined = galbedo * final;
+    //vec3 combined = final;
 
+    
+    /// dbg
+    /* */
+    #if 0
+        //if (gdepth >= 0.99999) return;
+        FragColor = vec4(reflect, 1.0);
+        return;
+    #endif
+    
     /*
     float near = 0.1f;
     float far = 120.0f;
-    float depthDist = 50.0f;
-    vec3 fogColour = vec3(0.3f, 0.3f, 1.0f);
+    float depthDist = 30.0f;
+    vec3 fogColour = vec3(0.3f);
     float steepness = 0.1f;
     
     vec3 colour = calculateFog(near, far, steepness, depthDist, gdepth, fogColour, combined);
-
     */
+        
     FragColor = vec4(combined, 1.0f); //texture(presentImage, texCoord)
 }

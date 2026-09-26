@@ -62,7 +62,7 @@ public:
     
     void saveLastMaticies();
 
-    void updateHaltonJitter();
+    void updateHaltonJitter(float jitterFactor);
     
     // Handles camera inputs
     void Inputs(GLFWwindow* window, float deltatime);

@@ -24,7 +24,7 @@ Shader RenderClass::LineShader;
 bool RenderClass::renderSkybox = true;
 bool RenderClass::doReflections = true;
 bool RenderClass::doSSR = true;
-bool RenderClass::doContactShadows = true;
+bool RenderClass::doContactShadows = false;
 bool RenderClass::doFog = true;
 GLfloat RenderClass::DepthDistance = 100.0f;
 GLfloat RenderClass::DepthPlane[] = { 0.1f, 100.0f };
@@ -34,8 +34,13 @@ glm::vec3 RenderClass::fogRGBA = glm::vec3( 1.0f);
 Line3D* RenderClass::line;
 Texture* RenderClass::bluenoise;
 Texture* RenderClass::bayermatrix;
+Texture* RenderClass::caustic;
+Texture* RenderClass::ripples;
+Texture* RenderClass::droplets;
+Texture* RenderClass::puddles;
 Texture3D* RenderClass::LUT;
 bool RenderClass::doTAA = true;
+float RenderClass::jitterFactor = 0.5f;
 bool RenderClass::doBinaryAlpha = true;
 bool RenderClass::animateBinaryAlpha = true;
 
@@ -102,6 +107,10 @@ void RenderClass::init(unsigned int width, unsigned int height) {
 	//bluenoise = new Texture(); bluenoise->createTexture("Assets/Dependants/LDR_LLL1_0.png", "misc", 6);
 	bluenoise = new Texture(); bluenoise->linearFilter = false; bluenoise->createTexture("Assets/Dependants/LDR_RGBA_0.png", "misc", 6);
 	bayermatrix = new Texture(); bayermatrix->createTexture("Assets/Dependants/bayer_matrix.png", "misc", 7);
+	caustic = new Texture(); caustic->linearFilter = true; caustic->createTexture("Assets/Dependants/caustic-256.png", "misc", 9);
+	ripples = new Texture(); ripples->linearFilter = true; ripples->createTexture("Assets/Dependants/atlas3x47_384x384.png", "misc", 10);
+	droplets = new Texture(); droplets->linearFilter = true; droplets->createTexture("Assets/Dependants/wallDroplets.png", "misc", 11);
+	puddles = new Texture(); puddles->linearFilter = true; puddles->createTexture("Assets/Dependants/puddles.png", "misc", 12);
 	LUT = new Texture3D(); LUT->createTexture3D("Assets/Dependants/LUT_33.png", "lut", 15); 
 	//raytracer::initcomputeShader(width, height); // Initialize compute shader for lighting pass
 	//denoiser::initcomputeShader(width, height);
@@ -141,6 +150,7 @@ void RenderClass::initGlobalShaders() {
 	taaShader.LoadShader("Assets/Shaders/PostProcess/TAA.vert", "Assets/Shaders/PostProcess/TAA.frag");
 	//raymarchShader.LoadShader("Assets/Shaders/raymarched/raymarch.vert", "Assets/Shaders/raymarched/raymarch.frag");
 	FlouraSWRT::initShaders();
+	flouraSDF::createShaders();
 	//raymarchShaderT.LoadComputeShader("Assets/Shaders/raymarched/raymarch.comp");
 	
 	
@@ -161,6 +171,39 @@ void RenderClass::initGlobalShaders() {
 	renderTarget::frameBufferProgram.LoadShader("Assets/Shaders/PostProcess/framebuffer.vert", "Assets/Shaders/PostProcess/framebuffer.frag");
 
 }
+
+void RenderClass::Cleanup() {
+	billBoardShader.Delete();
+	gPassShaderBillBoard.Delete();
+	taaShader.Delete();
+	//raymarchShader.Delete();
+	//skyGadientShader.Delete();
+	SolidColour.Delete();
+	billBoardShader.Delete();
+	LineShader.Delete();
+	FlouraDeferred::Delete();
+	FlouraSWRT::cleanupSWRTssbo();
+	renderTarget::frameBufferProgram.Delete();
+	GeometryPass::cleanupGbuffers();
+	dbgPass::cleanupDBGbuffers();
+	HistoryPass::cleanupHbuffers();
+	FlouraSWRT::cleanupShaders();
+	FlouraSWRT::cleanupSWRTbuffers();
+	flouraSDF::cleanupShaders();
+	
+	CubeVisualizer::cleanup();
+	line->~Line3D();
+	
+	bayermatrix->Delete();
+	bluenoise->Delete();
+	caustic->Delete();
+	ripples->Delete();
+	droplets->Delete();
+	puddles->Delete();
+	
+	LUT->Delete();
+}
+
 
 void RenderClass::ClearFramebuffers() {
 	// Clear first framebuffer
@@ -218,6 +261,7 @@ void RenderClass::Render(GLFWwindow* window, unsigned int width, unsigned int he
 	
 	Scene::draw();
 	
+	// should only do this when swrt is on
 	RenderHandler::render();
 	
 	//physworld::debugDraw();
@@ -242,17 +286,18 @@ void RenderClass::taaPass(){
 	glBindTexture(GL_TEXTURE_2D, renderTarget::screentexture);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	taaShader.setInt("screentexture", 0);
-	taaShader.setTexture2D("gNormal", 1, GeometryPass::gNormal);
-	taaShader.setTexture2D("depthMap", 2, GeometryPass::depthTexture);
-	taaShader.setTexture2D("gVelocity", 3, GeometryPass::gVelocity);
+	taaShader.setTexture2D("gAlbedo", 1, GeometryPass::gAlbedo);
+	taaShader.setTexture2D("gNormal", 2, GeometryPass::gNormal);
+	taaShader.setTexture2D("depthMap", 3, GeometryPass::depthTexture);
+	taaShader.setTexture2D("gVelocity", 4, GeometryPass::gVelocity);
 
 	// skip 8 because of shadow map (i really need to use bindless on these)
-	glActiveTexture(GL_TEXTURE4);
+	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_2D, HistoryPass::hColour);
 	glGenerateMipmap(GL_TEXTURE_2D);
-	taaShader.setInt("hColour", 4);
+	taaShader.setInt("hColour", 5);
 	
-	taaShader.setTexture2D("hDepthTexture", 5, HistoryPass::hDepthTexture);
+	taaShader.setTexture2D("hDepthTexture", 6, HistoryPass::hDepthTexture);
 	
 	taaShader.setFloat("NearPlane", Scene::maincamera.nearFar.x);
 	taaShader.setFloat("FarPlane", Scene::maincamera.nearFar.y);
@@ -295,33 +340,6 @@ void RenderClass::skyGraidentPass(){
 	glActiveTexture(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glDisable(GL_DITHER);
-}
-
-void RenderClass::Cleanup() {
-	billBoardShader.Delete();
-	gPassShaderBillBoard.Delete();
-	taaShader.Delete();
-	//raymarchShader.Delete();
-	//skyGadientShader.Delete();
-	SolidColour.Delete();
-	billBoardShader.Delete();
-	LineShader.Delete();
-	FlouraDeferred::Delete();
-	FlouraSWRT::cleanupSWRTssbo();
-	renderTarget::frameBufferProgram.Delete();
-	GeometryPass::cleanupGbuffers();
-	dbgPass::cleanupDBGbuffers();
-	HistoryPass::cleanupHbuffers();
-	FlouraSWRT::cleanupShaders();
-	FlouraSWRT::cleanupSWRTbuffers();
-	
-	CubeVisualizer::cleanup();
-	line->~Line3D();
-	
-	bayermatrix->Delete();
-	bluenoise->Delete();
-	
-	LUT->Delete();
 }
 
 void RenderClass::compileShaderUniforms(){

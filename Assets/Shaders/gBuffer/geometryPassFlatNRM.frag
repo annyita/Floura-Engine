@@ -119,8 +119,8 @@ void main(){
 	if (doBinaryAlpha) blueNoiseOpacity(albedoTex.a);
 
 	gPosition.rgb = crntPos; // Output position as-is
-	vec3 normal = CalcNewNormal(texture(nSamp, texCoord).xyz);
-	//vec3 normal = CalcNewNormal(vec3(0.5, 0.5, 1.0));
+	//vec3 normal = CalcNewNormal(texture(nSamp, texCoord).xyz);
+	vec3 normal = CalcNewNormal(vec3(0.5, 0.5, 1.0));
 	//gNormal.rgb = normal;
 	gNormal.a = texture(nSamp, texCoord).a; // Fetch normal from texture
 	gNormal.rgb = normal;

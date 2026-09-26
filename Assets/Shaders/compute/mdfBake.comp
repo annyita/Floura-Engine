@@ -1,0 +1,262 @@
+﻿#version 460 core
+
+#extension GL_ARB_gpu_shader_int64 : enable
+#extension GL_ARB_bindless_texture : require
+
+#define INF 3.40282347e+38f
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z =8) in;
+//layout(rgba32f, binding = 0) uniform image3D outMDF;
+layout(rgba16f, binding = 0) uniform image3D outMDF;
+//layout(r8_snorm, binding = 0) uniform image3D outMDF;
+layout(rgba8, binding = 1) uniform image3D outALB;
+
+struct triangle{
+    vec4 a;
+    vec4 b;
+    vec4 c;
+
+    vec4 uvAB;
+    vec4 uvC;
+    
+    vec4 primPos;
+    vec4 primExt;
+};
+
+layout(std430, binding = 15) buffer mesh {
+    triangle triangles[];
+};
+
+uniform ivec3 volumeSize;
+
+//vec3 ivPosition = vec3(0.0);
+//vec3 ivScale = vec3(1.0);
+uniform vec3 ivPosition;
+uniform vec3 ivScale;
+uniform float thickness;
+uniform bool accumulateMode;
+
+uniform sampler2D AlbedoHandle;
+uniform sampler2D EMHandle;
+
+vec3 faceNormalFromTriangle(vec3 a, vec3 b, vec3 c){
+    return normalize(cross(b - a, c - a));
+}
+
+vec3 nearestPointOnAABB(vec3 p, vec3 pos, vec3 extents){
+    return clamp(p, pos - extents, pos + extents);
+}
+
+
+float AreaOfTriangle(vec3 p1, vec3 p2, vec3 p3){
+    // 2 vectors from points
+    vec3 u = p2 - p1;
+    vec3 v = p3 - p1;
+    
+    // cross product of u and v
+    vec3 cp = cross(u, v);
+    
+    // half of magnitude of the vector cp
+    return length(cp) * 0.5f;
+}
+
+vec2 uvPosFromVertexAndPoint(vec3 a, vec3 b, vec3 c, const vec2 aUV, vec2 bUV, vec2 cUV, vec3 p){
+    // calc areas
+    float totalArea = AreaOfTriangle(a, b, c);
+    float areaPAB = AreaOfTriangle(p, a, b);
+    float areaPBC = AreaOfTriangle(p, b, c);
+    float areaPCA = AreaOfTriangle(p, c, a);
+    
+    // sum of each area
+    float areasum = areaPAB + areaPBC + areaPCA;
+    float elipson = 0.0001f * totalArea;
+    
+    // if point inside elipson
+    if (abs(totalArea - areasum) < elipson){
+        // calc weight
+        float weightA = areaPBC / totalArea;
+        float weightB = areaPCA / totalArea;
+        float weightC = areaPAB / totalArea;
+        
+        return vec2( (weightA * aUV) + (weightB * bUV) + (weightC * cUV) );
+    }
+    return vec2(0.0f);
+}
+
+// test func
+
+
+// https://github.com/juj/MathGeoLib/tree/master (thanks jukka), i didnt feel like writing this
+/*
+	Copyright Jukka Jylänki
+	
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
+vec3 closestPointOnTriangle(vec3 P, vec3 A, vec3 B, vec3 C){
+    /** The code for Triangle-float3 test is from Christer Ericson's Real-Time Collision Detection, pp. 141-142. */
+    
+    // Check if P is in vertex region outside A.
+    vec3 ab = B - A;
+    vec3 ac = C- A;
+    vec3 ap = P - A;
+    float d1 = dot(ab, ap);
+    float d2 = dot(ac, ap);
+    if (d1 <= 0.f && d2 <= 0.f)
+    return A; // Barycentric coordinates are (1,0,0).
+    
+    // Check if P is in vertex region outside B.
+    vec3 bp = P - B;
+    float d3 = dot(ab, bp);
+    float d4 = dot(ac, bp);
+    if (d3 >= 0.f && d4 <= d3)
+    return B; // Barycentric coordinates are (0,1,0).
+    
+    // Check if P is in edge region of AB, and if so, return the projection of P onto AB.
+    float vc = d1*d4 - d3*d2;
+    if (vc <= 0.f && d1 >= 0.f && d3 <= 0.f){
+        float v = d1 / (d1 - d3);
+        return A + v * ab; // The barycentric coordinates are (1-v, v, 0).
+    }
+    
+    // Check if P is in vertex region outside C.
+    vec3 cp = P - C;
+    float d5 = dot(ab, cp);
+    float d6 = dot(ac, cp);
+    if (d6 >= 0.f && d5 <= d6)
+    return C; // The barycentric coordinates are (0,0,1).
+    
+    // Check if P is in edge region of AC, and if so, return the projection of P onto AC.
+    float vb = d5*d2 - d1*d6;
+    if (vb <= 0.f && d2 >= 0.f && d6 <= 0.f){
+        float w = d2 / (d2 - d6);
+        return A + w * ac; // The barycentric coordinates are (1-w, 0, w).
+    }
+    
+    // Check if P is in edge region of BC, and if so, return the projection of P onto BC.
+    float va = d3*d6 - d5*d4;
+    if (va <= 0.f && d4 - d3 >= 0.f && d5 - d6 >= 0.f){
+        float w = (d4 - d3) / (d4 - d3 + d5 - d6);
+        return B + w * (C - B); // The barycentric coordinates are (0, 1-w, w).
+    }
+    
+    // P must be inside the face region. Compute the closest point through its barycentric coordinates (u,v,w).
+    float denom = 1.f / (va + vb + vc);
+    float v = vb * denom;
+    float w = vc * denom;
+    return A + ab * v + ac * w;
+}
+
+vec4 distanceToClosestPointOnMDFUVprim(vec3 P, float nThickness){
+    float minDist = INF;
+
+    int closestPrimIndex = -1;
+
+    for (int i = 0; i < triangles.length(); i++ ){
+        triangle tri = triangles[i];
+        
+        vec3 np = nearestPointOnAABB(P,tri.primPos.xyz, tri.primExt.xyz);
+        float nd = distance(np, P);
+        if (nd < minDist){
+            vec3 tnp = closestPointOnTriangle(P, tri.a.xyz, tri.b.xyz, tri.c.xyz);
+            float tnd = distance(tnp, P);
+            if (tnd < minDist){
+                closestPrimIndex = i;
+                minDist = tnd;
+            }
+        }
+    }
+
+    if (closestPrimIndex < 0) return vec4(0.0f);
+    triangle tri = triangles[closestPrimIndex];
+
+    vec3 cP = closestPointOnTriangle(P, tri.a.xyz, tri.b.xyz, tri.c.xyz);
+    minDist = distance(cP, P);
+    
+    // if directions are opossing, then flip ld (calc face normal here to cut down on calcs)
+    if (dot(P - cP, faceNormalFromTriangle(tri.a.xyz, tri.b.xyz, tri.c.xyz)) < 0.0f && minDist < nThickness)
+    minDist = -minDist;
+
+    // calc uv with return instead of every cycle to cut down on calcs
+    return vec4(minDist, uvPosFromVertexAndPoint(tri.a.xyz, tri.b.xyz, tri.c.xyz, tri.uvAB.xy, tri.uvAB.zw, tri.uvC.xy, cP), 1.0);
+}
+
+vec4 distanceToClosestPointOnMDFUVprimAABBless(vec3 P, float nThickness){
+    float minDist = INF;
+
+    int closestPrimIndex = -1;
+
+    for (int i = 0; i < triangles.length(); i++ ){
+        triangle tri = triangles[i];
+        
+        vec3 tnp = closestPointOnTriangle(P, tri.a.xyz, tri.b.xyz, tri.c.xyz);
+        float tnd = distance(tnp, P);
+        if (tnd < minDist){
+            closestPrimIndex = i;
+            minDist = tnd;
+        }
+    }
+
+    if (closestPrimIndex < 0) return vec4(0.0f);
+    triangle tri = triangles[closestPrimIndex];
+
+    vec3 cP = closestPointOnTriangle(P, tri.a.xyz, tri.b.xyz, tri.c.xyz);
+    minDist = distance(cP, P);
+
+    // if directions are opossing, then flip ld (calc face normal here to cut down on calcs)
+    if (dot(P - cP, faceNormalFromTriangle(tri.a.xyz, tri.b.xyz, tri.c.xyz)) < 0.0f && minDist < nThickness)
+    minDist = -minDist;
+
+    // calc uv with return instead of every cycle to cut down on calcs
+    return vec4(minDist, uvPosFromVertexAndPoint(tri.a.xyz, tri.b.xyz, tri.c.xyz, tri.uvAB.xy, tri.uvAB.zw, tri.uvC.xy, cP), 1.0);
+}
+
+void main() { // needs to take uv scale
+    const ivec3 uvw = ivec3(gl_GlobalInvocationID.xyz);
+
+    if (uvw.x >= volumeSize.x ||
+        uvw.y >= volumeSize.y ||
+        uvw.z >= volumeSize.z) return;
+
+    vec3 nMin = ivPosition - ivScale;
+    vec3 boundssize = 2.0 * ivScale;
+    
+    vec3 normalizedUVW = (vec3(uvw) + vec3(0.5f)) / vec3(volumeSize);
+
+    vec3 wp = nMin + normalizedUVW * boundssize;
+
+    //vec4 dist = distanceToClosestPointOnMDFUVprimAABBless(wp, thickness); // 0.05 // 0.001
+    vec4 dist = distanceToClosestPointOnMDFUVprim(wp, thickness); // 0.05 // 0.001
+    vec2 nUV = dist.yz;
+    vec4 albedo = texture(AlbedoHandle, nUV);
+    vec4 EM = texture(EMHandle, nUV);
+    //EM.rgb = vec3(1.0);
+
+    vec4 final = vec4(dist.x, EM.rgb);
+    
+    if (accumulateMode){
+        vec4 pMDF =imageLoad(outMDF, uvw);
+        
+        float d = min(pMDF.x, dist.x);
+        
+        if (pMDF.x == d){
+            final = pMDF;
+            EM = imageLoad(outALB, uvw);
+        }
+    }
+    //vec4 final
+    //dist
+    imageStore(outMDF, uvw, final);
+    imageStore(outALB, uvw, albedo);
+}

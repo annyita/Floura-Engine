@@ -902,7 +902,7 @@
     <ClCompile Include="src\Sound\SoundProgram.cpp" />
     <ClCompile Include="src\Sound\SoundRunner.cpp" />
     <ClCompile Include="src\Systems\general\jobClass.cpp" />
-    <ClCompile Include="src\Systems\Physics\BVH.cpp" />
+    <ClCompile Include="src\Systems\Physics\accelerate.cpp" />
     <ClCompile Include="src\Systems\Physics\Collision.cpp" />
     <ClCompile Include="src\Systems\Physics\physworld.cpp" />
     <ClCompile Include="src\Systems\Physics\SDF.cpp" />
@@ -910,6 +910,7 @@
     <ClCompile Include="src\Systems\util\relationshipManager.cpp" />
     <ClCompile Include="src\Systems\util\UUID.cpp" />
     <ClCompile Include="src\utils\FE_math.cpp" />
+    <ClCompile Include="src\utils\imageResize.cpp" />
     <ClCompile Include="src\utils\imageWrite.cpp" />
     <ClCompile Include="src\utils\logConsole.cpp" />
     <ClCompile Include="src\utils\noise.cpp" />
@@ -996,7 +997,7 @@
     <ClInclude Include="src\Sound\SoundProgram.h" />
     <ClInclude Include="src\Sound\SoundRunner.h" />
     <ClInclude Include="src\Systems\general\jobClass.h" />
-    <ClInclude Include="src\Systems\Physics\BVH.h" />
+    <ClInclude Include="src\Systems\Physics\accelerate.h" />
     <ClInclude Include="src\Systems\Physics\Collision.h" />
     <ClInclude Include="src\Systems\Physics\physworld.h" />
     <ClInclude Include="src\Systems\Physics\SDF.h" />
@@ -1004,6 +1005,7 @@
     <ClInclude Include="src\Systems\util\relationshipManager.h" />
     <ClInclude Include="src\Systems\util\UUID.h" />
     <ClInclude Include="src\utils\FE_math.h" />
+    <ClInclude Include="src\utils\imageResize.h" />
     <ClInclude Include="src\utils\imageWrite.h" />
     <ClInclude Include="src\utils\logConsole.h" />
     <ClInclude Include="src\utils\noise.h" />
@@ -1062,14 +1064,18 @@
     <Text Include="src\Libraries\include\imgui\LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\Shaders\compute\gdfDraw.comp" />
+    <Content Include="Assets\Shaders\compute\mdfBake.comp" />
     <Content Include="Assets\Shaders\Db\forWeightDBG.frag" />
     <Content Include="Assets\Shaders\Db\forWeightDBG.vert" />
     <Content Include="Assets\Shaders\Deferred\DFR_Phon.frag" />
     <Content Include="Assets\Shaders\Deferred\DFR_Phon.vert" />
     <Content Include="Assets\Shaders\Deferred\screenspaceReflections.frag" />
     <Content Include="Assets\Shaders\Deferred\screenspaceReflections.vert" />
+    <Content Include="Assets\Shaders\gBuffer\geometryPassFlatNRM.frag" />
     <Content Include="Assets\Shaders\gBuffer\geometryPassPOM.frag" />
     <Content Include="Assets\Shaders\gBuffer\geometryPassPOM.vert" />
+    <Content Include="Assets\Shaders\gBuffer\geometryPassRain.frag" />
     <Content Include="Assets\Shaders\gBuffer\geometryPassVertexViewer.frag" />
     <Content Include="Assets\Shaders\gBuffer\geometryPassVertexViewer.vert" />
     <Content Include="Assets\Shaders\gBuffer\geometryPassVerticeViewer.geom" />

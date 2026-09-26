@@ -20,8 +20,7 @@ struct VertexToFragment
 };
 
 [shader("vertex")]
-VOut vertexMain(Vertex input)
-{
+VOut vertexMain(Vertex input){
     VOut output;
     
     output.texCoord = input.aTex;
@@ -75,7 +74,6 @@ float4 fragmentMain(VOut input) : SV_Target
     //float3 zenithColour = float3(0.01, 0.02, 0.05) * 0.8;
     //float3 horizonColour = float3(0.05, 0.08, 0.15);
     //float3 groundColour = float3(0.02, 0.03, 0.05);
-    
         
     zenithColour += step(1.0 - coverage, random(rayDir.xy));
     float blend = clamp(rayDir.y, 0.0, 1.0);

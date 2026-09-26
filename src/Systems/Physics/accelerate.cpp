@@ -1,9 +1,40 @@
-#include "BVH.h"
+#include "accelerate.h"
 #include "utils/FE_math.h"
 #include <Render/Handler/RenderHandler.h>
 
 
-Collision::AABB BVH::primsToBounds(std::vector<BVH_primitive>& prims){
+void accelerate::uniformSplitEmptySpace(std::vector<Collision::AABB>& aabbs, glm::vec3& p, glm::vec3& e, int dimension){
+    const glm::vec3 youHappyC(static_cast<float>(dimension));
+    glm::vec3 min(p - e); glm::vec3 boundSize = glm::vec3(2.0) * e;
+    Collision::AABB naabb; naabb.size = e / youHappyC;
+    
+    for (int x = 0; x < dimension; ++x)
+        for (int y = 0; y < dimension; ++y)
+            for (int z = 0; z < dimension; ++z){
+                glm::vec3 uvw(x, y, z);
+                
+                glm::vec3 normalizedUVW = (uvw + glm::vec3(0.5f)) / youHappyC;
+                naabb.position = min + normalizedUVW * boundSize;
+                
+                aabbs.push_back(naabb);
+            }
+}
+
+void accelerate::transformClips(glm::vec3 p, std::vector<clipmapLevel>& clips){
+    for (int i = 0; i < clips.size(); ++i){
+        glm::vec3 np = p;
+        np = FE_Math::snapToGrid(np, clips[i].ps.w);
+        if (glm::vec3(clips[i].ps) != np){
+            // dirty
+            clips[i].ps = glm::vec4(np, clips[i].ps.w);
+            clips[i].dirty = 1;
+            
+            //std::cout << "abcdefg" << std::endl;
+        }
+    }
+}
+
+Collision::AABB accelerate::primsToBounds(std::vector<BVH_primitive>& prims){
     glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());
     glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest());
     for (int i = 0; i < prims.size(); ++i){
@@ -17,8 +48,7 @@ Collision::AABB BVH::primsToBounds(std::vector<BVH_primitive>& prims){
     return nAABB;
 }
 
-std::vector<BVH::BVH_primitive> BVH::buildIndicesIntoPrims(std::vector<Vertex>& vertices, std::vector<GLuint>& indices){
-    
+std::vector<accelerate::BVH_primitive> accelerate::buildIndicesIntoPrims(std::vector<Vertex>& vertices, std::vector<GLuint>& indices){
     std::vector<BVH_primitive> nPrims;
     for (int i = 0; i < indices.size(); i += 3){
         
@@ -51,7 +81,7 @@ std::vector<BVH::BVH_primitive> BVH::buildIndicesIntoPrims(std::vector<Vertex>& 
     return nPrims;
 }
 
-std::vector<BVH::leaf> BVH::blasGenBVH(std::vector<Vertex>& vertices, std::vector<GLuint>& indices, 
+std::vector<accelerate::leaf> accelerate::blasGenBVH(std::vector<Vertex>& vertices, std::vector<GLuint>& indices, 
     int minTri, glm::mat4 transformation){
             
     std::vector<leaf> nLeafs;
@@ -61,7 +91,7 @@ std::vector<BVH::leaf> BVH::blasGenBVH(std::vector<Vertex>& vertices, std::vecto
     for (int i = 0; i < nVertices.size(); ++i)
         FE_Math::transformPoint(nVertices[i].position, transformation);
     
-    std::vector<BVH::BVH_primitive> prims = buildIndicesIntoPrims(nVertices, indices);
+    std::vector<accelerate::BVH_primitive> prims = buildIndicesIntoPrims(nVertices, indices);
     if (prims.empty()) return nLeafs;
     
     leaf fatherLeaf;
@@ -74,7 +104,7 @@ std::vector<BVH::leaf> BVH::blasGenBVH(std::vector<Vertex>& vertices, std::vecto
     return nLeafs;
 }
 
-int BVH::aabbTraverseKDtree(std::vector<Vertex>& vertices, std::vector<BVH::leaf>& leaves, int &fatherLeafIndex, float &minDist, int &minIndex, int &closestPrimIndex, glm::vec3& p, glm::vec3& s){
+int accelerate::aabbTraverseKDtree(std::vector<Vertex>& vertices, std::vector<accelerate::leaf>& leaves, int &fatherLeafIndex, float &minDist, int &minIndex, int &closestPrimIndex, glm::vec3& p, glm::vec3& s){
     if (leaves.empty() || fatherLeafIndex < 0) return -1;
         
     glm::vec3 np = Collision::nearestPointOnAABB(p, leaves[fatherLeafIndex].aabb.position, leaves[fatherLeafIndex].aabb.size);
@@ -145,7 +175,7 @@ int BVH::aabbTraverseKDtree(std::vector<Vertex>& vertices, std::vector<BVH::leaf
     return 0;
 }
 
-std::vector<BVH::leaf> BVH::blasGenKDAccel(std::vector<Vertex>& vertices, std::vector<GLuint>& indices, int minTri, int maxDepth, glm::mat4 transformation){
+std::vector<accelerate::leaf> accelerate::blasGenKDAccel(std::vector<Vertex>& vertices, std::vector<GLuint>& indices, int minTri, int maxDepth, glm::mat4 transformation){
             
     std::vector<leaf> nLeafs;
     std::vector<Vertex> nVertices = vertices;
@@ -156,7 +186,7 @@ std::vector<BVH::leaf> BVH::blasGenKDAccel(std::vector<Vertex>& vertices, std::v
     
     //std::vector<GLuint>& nindices = indices;
     
-    std::vector<BVH::BVH_primitive> prims = buildIndicesIntoPrims(nVertices, indices);
+    std::vector<accelerate::BVH_primitive> prims = buildIndicesIntoPrims(nVertices, indices);
     if (prims.empty()) return nLeafs;
     //std::cout << prims.size() << std::endl;
     
@@ -177,7 +207,7 @@ std::vector<BVH::leaf> BVH::blasGenKDAccel(std::vector<Vertex>& vertices, std::v
     return nLeafs;
 }
 
-bool BVH::blasInternalKD(std::vector<BVH_primitive>& prims, std::vector<Vertex> &vertices,
+bool accelerate::blasInternalKD(std::vector<BVH_primitive>& prims, std::vector<Vertex> &vertices,
                          leaf& rootLeaf, int& minTri, int &maxDepth, int depth, std::vector<leaf>& Leafs){
         
         if (minTri <= 0 || depth > maxDepth) return false;

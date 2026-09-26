@@ -1,9 +1,9 @@
 ﻿#include "voxelizer.h"
 #include "utils/FE_math.h"
-#include "Systems/Physics/BVH.h"
+#include "Systems/Physics/accelerate.h"
 #include <utils/imageWrite.h>
 
-void voxelizer::bakeMeshVXGAccel(std::vector<Vertex>& vertices, std::vector<BVH::BVH_primitive>& prims,
+void voxelizer::bakeMeshVXGAccel(std::vector<Vertex>& vertices, std::vector<accelerate::BVH_primitive>& prims,
     Collision::AABB root, const int sliceSize, Texture3D& texture, GLuint slot, std::vector<Texture>& textures){
     
     Collision::minmax mm = Collision::returnMinMax(root.position, root.size);
@@ -82,7 +82,7 @@ void voxelizer::bakeMeshVXGAccel(std::vector<Vertex>& vertices, std::vector<BVH:
     glBindTexture(GL_TEXTURE_3D, 0);
 }
 
-void voxelizer::bakeMeshVXGAccel(std::vector<Vertex>& vertices, std::vector<BVH::leaf>& leaves, Collision::AABB root,
+void voxelizer::bakeMeshVXGAccel(std::vector<Vertex>& vertices, std::vector<accelerate::leaf>& leaves, Collision::AABB root,
     const int sliceSize, Texture3D& texture, GLuint slot, std::vector<Texture>& textures){
     
     Collision::minmax mm = Collision::returnMinMax(root.position, root.size);
@@ -165,7 +165,7 @@ void voxelizer::bakeMeshVXGAccelMeshPrims(std::vector<Mesh*>& meshes, std::vecto
     Collision::AABB root, const int sliceSize, Texture3D& texture, GLuint slot){
     
     std::vector<std::vector<Vertex>> vertices;
-    std::vector<std::vector<BVH::BVH_primitive>> prims;
+    std::vector<std::vector<accelerate::BVH_primitive>> prims;
     std::vector<std::vector<Texture>> textures; 
     
     for (int i = 0; i < meshes.size(); ++i){
@@ -175,7 +175,7 @@ void voxelizer::bakeMeshVXGAccelMeshPrims(std::vector<Mesh*>& meshes, std::vecto
             FE_Math::transformPoint(nVertices[x].position, transforms[i]);
         
         // generate prims
-        std::vector<BVH::BVH_primitive> nPrims = BVH::buildIndicesIntoPrims(nVertices,
+        std::vector<accelerate::BVH_primitive> nPrims = accelerate::buildIndicesIntoPrims(nVertices,
              meshes[i]->indices);
         
         vertices.push_back(nVertices);
@@ -262,7 +262,7 @@ void voxelizer::bakeMeshVXGAccelMeshPrims(std::vector<Mesh*>& meshes, std::vecto
     glBindTexture(GL_TEXTURE_3D, 0);
 }
 
-glm::vec4 voxelizer::VoxelizeMeshVXG(std::vector<Vertex>& vertices, std::vector<BVH::BVH_primitive>& prims,
+glm::vec4 voxelizer::VoxelizeMeshVXG(std::vector<Vertex>& vertices, std::vector<accelerate::BVH_primitive>& prims,
                                      glm::vec3& P, glm::vec3& S, std::vector<Texture>& textures){
     
     for (int i = 0; i < prims.size(); ++i){
@@ -303,25 +303,25 @@ glm::vec4 voxelizer::VoxelizeMeshVXG(std::vector<Vertex>& vertices, std::vector<
     return glm::vec4(0.0);
 }
 
-glm::vec4 voxelizer::VoxelizeMeshVXG(std::vector<Vertex>& vertices, std::vector<BVH::leaf>& leaves, glm::vec3& P,
+glm::vec4 voxelizer::VoxelizeMeshVXG(std::vector<Vertex>& vertices, std::vector<accelerate::leaf>& leaves, glm::vec3& P,
     glm::vec3& S, std::vector<Texture>& textures){
     float minDist = std::numeric_limits<float>::max();
     int closestLeafIndex = -1;
     int closestPrimIndex = -1;
     int startingIndex = static_cast<int>(leaves.size()) - 1;
     //startingIndex = 0;
-    BVH::aabbTraverseKDtree(vertices, leaves, startingIndex, minDist, closestLeafIndex, closestPrimIndex, P, S);
+    accelerate::aabbTraverseKDtree(vertices, leaves, startingIndex, minDist, closestLeafIndex, closestPrimIndex, P, S);
     
     if (closestLeafIndex < 0 || closestPrimIndex < 0|| leaves[closestLeafIndex].prims.empty()) return glm::vec4(1.0, 0.0f, 0.0f, 1.0f);
     
     // yeah i know bad, cutting corners rn
-    std::vector<BVH::BVH_primitive> singleprim;
+    std::vector<accelerate::BVH_primitive> singleprim;
     singleprim.push_back(leaves[closestLeafIndex].prims[closestPrimIndex]);
     return VoxelizeMeshVXG(vertices, singleprim, P, S, textures);
 }
 
 glm::vec4 voxelizer::VoxelizeMeshVXGmeshPrims(std::vector<std::vector<Vertex>>& vertices,
-    std::vector<std::vector<BVH::BVH_primitive>>& prims, glm::vec3& P, glm::vec3& S,
+    std::vector<std::vector<accelerate::BVH_primitive>>& prims, glm::vec3& P, glm::vec3& S,
     std::vector<std::vector<Texture>>& textures){
         
     for (int meshInd = 0; meshInd < prims.size(); ++meshInd) //meshes
@@ -372,6 +372,39 @@ void voxelizer::cacheVXG(const char* path, int hash, std::vector<Texture3D *>& m
             meshSDFs[i]->width, meshSDFs[i]->height, meshSDFs[i]->depth,
             nPath.c_str(), GL_RGBA, GL_UNSIGNED_BYTE, 4); // GB
     }
+}
+
+void voxelizer::octSplitEmptySpace(std::vector<Collision::AABB>& aabbs, glm::vec3& p, glm::vec3& e, int iter){
+    if (iter <= 0) return;
+    
+    Collision::octSplit newSplit = Collision::octSplitVolume(p, e);
+    
+    int nCount = iter - 1;
+    
+    if (nCount == 0){
+        Collision::AABB naabb; naabb.size = newSplit.size;
+        
+        naabb.position = newSplit.splitTRF; aabbs.push_back(naabb);
+        naabb.position = newSplit.splitTLF; aabbs.push_back(naabb);
+        naabb.position = newSplit.splitTRB; aabbs.push_back(naabb);
+        naabb.position = newSplit.splitTLB; aabbs.push_back(naabb);
+        
+        naabb.position = newSplit.splitDRF; aabbs.push_back(naabb);
+        naabb.position = newSplit.splitDLF; aabbs.push_back(naabb);
+        naabb.position = newSplit.splitDRB; aabbs.push_back(naabb);
+        naabb.position = newSplit.splitDLB; aabbs.push_back(naabb);
+        return;
+    }
+    
+    octSplitEmptySpace(aabbs, newSplit.splitTRF, newSplit.size, nCount);
+    octSplitEmptySpace(aabbs, newSplit.splitTLF, newSplit.size, nCount);
+    octSplitEmptySpace(aabbs, newSplit.splitTRB, newSplit.size, nCount);
+    octSplitEmptySpace(aabbs, newSplit.splitTLB, newSplit.size, nCount);
+    
+    octSplitEmptySpace(aabbs, newSplit.splitDRF, newSplit.size, nCount);
+    octSplitEmptySpace(aabbs, newSplit.splitDLF, newSplit.size, nCount);
+    octSplitEmptySpace(aabbs, newSplit.splitDRB, newSplit.size, nCount);
+    octSplitEmptySpace(aabbs, newSplit.splitDLB, newSplit.size, nCount);
 }
 
 std::vector<Collision::AABB> voxelizer::voxelizeMeshKD(std::vector<Vertex>& vertices, std::vector<GLuint>& indices,

@@ -40,8 +40,7 @@ float edgeAwareBoxBlur(sampler2D inputSampler, float colour, float linearizedDep
     vec2 lscreenSize = textureSize(inputSampler, 0);
     vec2 ltexelSize = 1.0 / lscreenSize;
 
-    float avgL =0.0; int h = 0;
-    float avgC = 0.0f;
+    int h = 0; float avgC = 0.0f;
     for(int x = -radius; x <= radius; ++x){
         for(int y = -radius; y <= radius; ++y){
             vec2 offset = vec2(x, y) * ltexelSize;
@@ -54,11 +53,9 @@ float edgeAwareBoxBlur(sampler2D inputSampler, float colour, float linearizedDep
             if (depthDifference > 0.1 || normalSimilarity < 0.9) continue;
 
             float neighbourColour = texture(inputSampler, texCoord + offset).r;
-            //float nLumanance = lumaFromRGB(neighbourColour);
             avgC += neighbourColour;
 
             h++;
-            //avgL += nLumanance;
         }
     }
     return avgC / h;

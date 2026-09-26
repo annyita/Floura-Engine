@@ -5,9 +5,9 @@
             1.100000023841858,
             676.0
         ],
-        "Window": "Default",
+        "Window": "arch",
         "doFog": false,
-        "doReflections": false,
+        "doReflections": true,
         "fogRGBA": [
             1.0,
             1.0,

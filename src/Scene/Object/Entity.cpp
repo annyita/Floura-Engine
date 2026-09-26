@@ -167,10 +167,19 @@ void entity::update()
 	}
 
 	updateScripts();
+	
+	if (component.systems.transformation.position != component.systems.htransform.position||
+		component.systems.transformation.scale != component.systems.htransform.scale ||
+		component.systems.transformation.rotation != component.systems.htransform.rotation){
+		
+		component.systems.htransform.position = component.systems.transformation.position;
+		component.systems.htransform.scale = component.systems.transformation.scale;
+		component.systems.htransform.rotation = component.systems.transformation.rotation;
+		FlouraSWRT::dirtyGDF = true;
+	}
 }
 
-void entity::updatePhysicsDynamics(float deltatime)
-{
+void entity::updatePhysicsDynamics(float deltatime){
 	
 	//updateMeshAABBs();
 	if (component.physobject.hasRigidbody) // change name to hasdynamics
@@ -203,11 +212,9 @@ void entity::Delete()
 	//entity::queuedDeletion(); // sit here for now
 }
 
-void entity::queuedDeletion()
-{
+void entity::queuedDeletion(){
 	physworld::bundleArrayDeleteWithUUID(component.physobject.UUID);
-	switch (type)
-	{
+	switch (type){
 	case ENT_MODEL_TYPE: // model
 		{
 
@@ -229,24 +236,19 @@ void entity::queuedDeletion()
 		break;
 	}
 
-	for (size_t i = 0; i < ScriptObjects.size(); i++)
-	{
+	for (size_t i = 0; i < ScriptObjects.size(); i++){
 		removeScript(i);
 	}
 
 	// decouple children
 	int thisIndex = RelationshipManager::indexFromUUIDEntity(entity::UUID);
-	if (thisIndex != -1)
-	{
-		for (size_t i = 0; i < component.relationship.childUUID.size(); i++)
-		{
-
+	if (thisIndex != -1){
+		for (size_t i = 0; i < component.relationship.childUUID.size(); i++){
 			int childIndex = RelationshipManager::indexFromUUIDEntity(component.relationship.childUUID[i]);
 			if (childIndex != -1) RelationshipManager::removeParent(childIndex);
 		}
 		// erase paremt i should do too
-		if (component.relationship.hasParent)
-		{
+		if (component.relationship.hasParent){
 			RelationshipManager::removeParent(thisIndex);
 		}
 	
@@ -385,8 +387,7 @@ void entity::draw(){
 			newRenderData.pPosition = component.systems.previousTransformation.position;
 			newRenderData.pRotation = component.systems.previousTransformation.rotation;
 			newRenderData.pScale = component.systems.previousTransformation.scale;
-			
-			newRenderData.smoothnessValue = component.render.smoothnessValue;
+				
 			newRenderData.uvScale = component.systems.material.uvScale;
 			RenderHandler::addToRenderQueue(newRenderData);
 
@@ -394,7 +395,7 @@ void entity::draw(){
 			int index = RenderHandler::fetchModelIndex(component.render.renderID);
 			if (index != -1){
 				//raytracer::uvScaleUpdate(component.render.instanceUUID, component.systems.material.uvScale);
-				FlouraSWRT::updateUVscale(component.render.instanceUUID, component.systems.material.uvScale);
+				//FlouraSWRT::updateUVscale(component.render.instanceUUID, component.systems.material.uvScale);
 			}
 			for (size_t i = 0; i < component.collider.rootnodes.size(); i++){
 				if (Collision::showBoxCollider){
@@ -501,8 +502,7 @@ void entity::updateMeshAABBs()
 
 }
 
-void entity::updateModelBounds()
-{
+void entity::updateModelBounds(){
 	std::vector<glm::vec3> points;
 	
 	for (size_t i = 0; i < component.collider.rootnodes.size(); i++){
@@ -526,8 +526,7 @@ void entity::updateModelBounds()
 	//component.physobject.collisionObject.sphere.radius *= 2.0f;
 }
 
-void entity::createModel(const std::string& path, const std::string& materialPath)
-{
+void entity::createModel(const std::string& path, const std::string& materialPath){
 	RenderHandler::batchOfUUID newBatchOfUUID = RenderHandler::addModel(path);
 	component.render.renderID = newBatchOfUUID.RenderID;
 	component.render.instanceUUID = newBatchOfUUID.instanceUUID;
@@ -536,11 +535,9 @@ void entity::createModel(const std::string& path, const std::string& materialPat
 	component.render.dirtyTransform = true;
 	entity::updateMeshAABBs();
 	component.systems.material.Material.LoadMaterial(materialPath);
-
+	
 	int index = RenderHandler::fetchModelIndex(component.render.renderID);
 	if (index != -1){
-		//raytracer::uploadToRaytracer(newBatchOfUUID.instanceUUID);
-		
 		FlouraSWRT::uploadToLSDFScene(component.render.instanceUUID);
 	}
 }

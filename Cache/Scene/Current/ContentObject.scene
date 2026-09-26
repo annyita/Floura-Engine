@@ -78,12 +78,6 @@
         "Type": "NULL"
     },
     {
-        "Name": "sponzacrytek",
-        "ObjectType": "Model",
-        "Path": "temp/sponzacrytek/sponza.obj",
-        "Type": "NULL"
-    },
-    {
         "Name": "walling",
         "ObjectType": "Model",
         "Path": "temp/walling.glb",
@@ -93,12 +87,6 @@
         "Name": "picnic_scene",
         "ObjectType": "Model",
         "Path": "temp/picnic scene/picnic_scene.gltf",
-        "Type": "NULL"
-    },
-    {
-        "Name": "grey_roof_tiles_02_1k",
-        "ObjectType": "Model",
-        "Path": "Assets/Models/grey_roof_tiles_02_1k.gltf/grey_roof_tiles_02_1k.gltf",
         "Type": "NULL"
     },
     {
@@ -360,12 +348,6 @@
         "Type": "NULL"
     },
     {
-        "Name": "ww2cityscene",
-        "ObjectType": "Model",
-        "Path": "temp/ww2cityscene/ww2cityscene.gltf",
-        "Type": "NULL"
-    },
-    {
         "Name": "lightbeam",
         "ObjectType": "Model",
         "Path": "temp/lightbeam.glb",
@@ -414,18 +396,6 @@
         "Type": "NULL"
     },
     {
-        "Name": "annaAarch",
-        "ObjectType": "Model",
-        "Path": "temp/annasarch/annaAarch.gltf",
-        "Type": "NULL"
-    },
-    {
-        "Name": "VerticeViewer",
-        "ObjectType": "Material",
-        "Path": "Assets/Material/VerticeViewer.Material",
-        "Type": "NULL"
-    },
-    {
         "Name": "AnnasCastle",
         "ObjectType": "Model",
         "Path": "temp/AnnasCastle/castle.gltf",
@@ -459,6 +429,126 @@
         "Name": "rainbowglass",
         "ObjectType": "Model",
         "Path": "temp/rainbowglass.glb",
+        "Type": "NULL"
+    },
+    {
+        "Name": "annasFence",
+        "ObjectType": "Model",
+        "Path": "temp/annasFence/fence3.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "brickarchway",
+        "ObjectType": "Model",
+        "Path": "temp/brickarchway/brickArchway.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "wokeflag",
+        "ObjectType": "Model",
+        "Path": "temp/wokeflag/wokeflag.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "barsSewers",
+        "ObjectType": "Model",
+        "Path": "temp/barssewers/bars.glb",
+        "Type": "NULL"
+    },
+    {
+        "Name": "DefaultWET",
+        "ObjectType": "Material",
+        "Path": "Assets/Material/DefaultWET.Material",
+        "Type": "NULL"
+    },
+    {
+        "Name": "annaurban",
+        "ObjectType": "Model",
+        "Path": "temp/annaurban/urban.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "urbanwindowless",
+        "ObjectType": "Model",
+        "Path": "temp/annaurban/urbanwindowless.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "TropicalBedroomGlassLess",
+        "ObjectType": "Model",
+        "Path": "temp/TropicalBedroom/TropicalBedroomGlassLess.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "emissionCube.model",
+        "ObjectType": "Model",
+        "Path": "Assets/Models/emissionCube.model",
+        "Type": "NULL"
+    },
+    {
+        "Name": "white_oak.model",
+        "ObjectType": "Model",
+        "Path": "Assets/Models/white_oak.model",
+        "Type": "NULL"
+    },
+    {
+        "Name": "poolroom",
+        "ObjectType": "Model",
+        "Path": "temp/poolroom/poolroom.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "waterMDFless.model",
+        "ObjectType": "Model",
+        "Path": "Assets/Models/waterMDFless.model",
+        "Type": "NULL"
+    },
+    {
+        "Name": "cube2",
+        "ObjectType": "Model",
+        "Path": "Assets/Models/basic shapes 2/cube.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "jarvis",
+        "ObjectType": "Model",
+        "Path": "temp/jarvis/jarvis.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "jarvishum",
+        "ObjectType": "Sound",
+        "Path": "temp/jarvis/jarvishum.wav",
+        "Type": "NULL"
+    },
+    {
+        "Name": "jarvisbeep",
+        "ObjectType": "Sound",
+        "Path": "temp/jarvis/jarvisbeep.wav",
+        "Type": "NULL"
+    },
+    {
+        "Name": "sibenikfixed",
+        "ObjectType": "Model",
+        "Path": "temp/sibenik/sibenikfixed.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "DefaultFlatNormal",
+        "ObjectType": "Material",
+        "Path": "Assets/Material/DefaultFlatNormal.Material",
+        "Type": "NULL"
+    },
+    {
+        "Name": "doctorrigged",
+        "ObjectType": "Model",
+        "Path": "temp/Ch16_nonPBR.fbx",
+        "Type": "NULL"
+    },
+    {
+        "Name": "ForwardAnimationWeightDBG",
+        "ObjectType": "Material",
+        "Path": "Assets/Material/ForwardAnimationWeightDBG.Material",
         "Type": "NULL"
     }
 ]

@@ -74,11 +74,12 @@ struct localSDF{
 
     uint64_t instanceUUID;
     sampler3D SDF_Handle;
-
-    sampler2D texture_diffuse_Handle;
-    sampler2D texture_roughness_Handle;
-    sampler2D texture_normal_Handle;
-    sampler2D texture_emission_Handle;
+    sampler3D ALB_Handle;
+    uint64_t padding;
+    //sampler2D texture_diffuse_Handle;
+    //sampler2D texture_roughness_Handle;
+    //sampler2D texture_normal_Handle;
+    //sampler2D texture_emission_Handle;
 
 };
 
@@ -718,9 +719,12 @@ vec3 reflection(vec3 pArm, vec3 pNrm, vec3 ro, vec3 rd, float maxdist, float min
                 lastdir = reflect(lastdir, hr.normal); // probably looks very off cause the normal is smooth
 
                 //material nMaterial = getMaterial(hr.materialIndex, hr.uv, clamp(i + r_minLodLevel, 0, 10));
-                vec3 ncolour = textureLod(lSDFS[hr.materialIndex].texture_diffuse_Handle, hr.uv, r_minLodLevel).rgb;
-                vec3 arm = textureLod( lSDFS[hr.materialIndex].texture_roughness_Handle, hr.uv, r_minLodLevel).rgb;
+                //vec3 ncolour = textureLod(lSDFS[hr.materialIndex].texture_diffuse_Handle, hr.uv, r_minLodLevel).rgb;
+                //vec3 arm = textureLod( lSDFS[hr.materialIndex].texture_roughness_Handle, hr.uv, r_minLodLevel).rgb;
 
+                vec3 ncolour = vec3(1.0);
+                vec3 arm = vec3(1.0, 1.0, 0.0);
+                
                 rough = arm.g;
                 met = arm.b;
 
@@ -805,9 +809,9 @@ indirectChannels indirectAndEmissionMarch(vec3 pArm, vec3 pNrm, vec3 ro, vec3 rd
         if (hr.isHit){
             //material nMaterial = getMaterial(hr.materialIndex, hr.uv, i_minLodLevel);
             emHitCount++;
-            lastArm = textureLod( lSDFS[hr.materialIndex].texture_roughness_Handle, hr.uv, i_minLodLevel).rgb;
-            vec3 mcolour = textureLod(lSDFS[hr.materialIndex].texture_diffuse_Handle, hr.uv, i_minLodLevel).rgb;
-            lastNrm = textureLod(lSDFS[hr.materialIndex].texture_normal_Handle, hr.uv, i_minLodLevel).rgb;
+
+            lastArm = vec3(1.0, 1.0, 0.0);
+            vec3 mcolour = vec3(1.0);
 
             vec3 origin = hr.hitpos + hr.normal * originEplison;
 
@@ -817,7 +821,7 @@ indirectChannels indirectAndEmissionMarch(vec3 pArm, vec3 pNrm, vec3 ro, vec3 rd
 
             vec3 diffuseComponent = mcolour * shadow;
 
-            emColour += textureLod( lSDFS[hr.materialIndex].texture_emission_Handle, hr.uv, e_minLodLevel).rgb;
+            emColour += vec3(0.0);
             indColour += diffuseComponent;
         }
         else {

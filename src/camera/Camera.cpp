@@ -9,8 +9,7 @@
 
 float timeAccumulator = 0;
 
-void Camera::InitCamera(int width, int height, glm::vec3 position)
-{
+void Camera::InitCamera(int width, int height, glm::vec3 position){
     Camera::width = width;
     Camera::height = height;
     Position = position;
@@ -68,15 +67,14 @@ const glm::vec2 HaltonJitters[8] = {
     glm::vec2(-0.4375f,  0.3888f)
 };
 
-void Camera::updateHaltonJitter()
-{
+void Camera::updateHaltonJitter(float jitterFactor){
     // increase 
     jitterIndex +=1;
     if (jitterIndex > 7) jitterIndex = 0;// index starts at 0
     
     // fetch jitter
 
-   currentJitter = HaltonJitters[jitterIndex];
+   currentJitter = HaltonJitters[jitterIndex] * jitterFactor;
     
     scaledCurrentJitter = glm::vec2(
     (currentJitter.x * 2.0f) / (float)width,

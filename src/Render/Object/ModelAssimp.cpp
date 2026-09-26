@@ -1,7 +1,7 @@
 #include "ModelAssimp.h"
 #include "Systems/util/UUID.h"
 #include  <utils/FE_math.h>
-#include <Systems/Physics/BVH.h>
+#include <Systems/Physics/accelerate.h>
 #include <assimp/pbrmaterial.h>
 #include <assimp/material.h>
 #include <thread>
@@ -9,6 +9,7 @@
 #include <chrono>
 #include <Systems/Physics/SDF.h>
 #include "Render/pipeline/prebuilt_pipelines/swrt.h"
+#include <Render/Handler/RenderHandler.h>
 
 void Model::updatePosition(glm::vec3 Position)
 {globalTransformation.position = Position;}
@@ -105,6 +106,11 @@ Model::~Model() {
         meshSDFs[i]->Delete();
         meshSDFs.erase(meshSDFs.begin() + i);
     }
+
+    for (int i = 0; i < meshSDFs2.size(); ++i){
+        meshSDFs2[i]->Delete();
+        meshSDFs2.erase(meshSDFs2.begin() + i);
+    }
     
 }
 
@@ -112,8 +118,7 @@ void Model::loadModelPathless(){
     loadModel(path);
 }
 
-void Model::draw(Shader& shader, Camera Camera)
-{
+void Model::draw(Shader& shader, Camera Camera){
     if (!loaded) return;
     //doLodsDraw
 	// draw all meshes and parse in data
@@ -127,6 +132,10 @@ void Model::draw(Shader& shader, Camera Camera)
         
        // if (!meshAabbPoints.empty()) meshes[i].drawRoot = 
         
+        RenderHandler::drawCount++;
+        
+        shader.setInt("meshIndex", i);
+        shader.setInt("totalDrawCount", RenderHandler::drawCount);
         meshes[i].draw(shader, Camera);
         
         meshes[i].hasLod = tLod; //set
@@ -134,17 +143,14 @@ void Model::draw(Shader& shader, Camera Camera)
     }  
 }
 
-void Model::drawInstance(Shader& shader, Camera Camera, int instanceCount)
-{
+void Model::drawInstance(Shader& shader, Camera Camera, int instanceCount){
     if (!loaded) return;
-    for (unsigned int i = 0; i < meshes.size(); i++)
-    {
+    for (unsigned int i = 0; i < meshes.size(); i++){
         meshes[i].drawInstanced(shader, Camera, instanceCount);
     }
 }
 
-void Model::createMeshAABBs()
-{
+void Model::createMeshAABBs(){
     if (!loaded) return;
     meshAabbPoints.clear();
     rootnodes.clear();
@@ -155,8 +161,7 @@ void Model::createMeshAABBs()
     glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());
     glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest());
     
-    for (size_t i = 0; i < meshes.size(); i++)
-    {
+    for (size_t i = 0; i < meshes.size(); i++){
         Collision::rubiksCubePoints newRubikzCube;
         newRubikzCube = Collision::fetchFurthestVertices(meshes[i].vertices);
         meshes[i].meshAabbPoints = newRubikzCube;
@@ -199,8 +204,7 @@ void Model::createMeshAABBs()
     ModelBounds.size = (max - min) * 0.5f;
 }
 
-void Model::generateMeshBlases(int mintri, int maxDepth)
-{
+void Model::generateMeshBlases(int mintri, int maxDepth){
     std::cout << "blas generation" <<  std::endl;
     auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < meshes.size(); ++i){
@@ -214,102 +218,7 @@ void Model::generateMeshBlases(int mintri, int maxDepth)
     std::cout << "time elapsed (seconds): " << seconds.count() << std::endl;
 }
 
-void Model::SDFgenerate(int sliceSize, GLuint slot){
-            if (!loaded) return;
-    
-    if (meshes.size() > FlouraSWRT::localPerModelMeshCountCap){
-        sdfCompatible = false;
-        return;
-    }
-    
-    for (int i = 0; i < meshSDFs.size(); ++i)
-        meshSDFs[i]->Delete();
-    meshSDFs.clear();
-
-    auto start = std::chrono::steady_clock::now();
-    
-    std::cout << "Amount to generate: " << meshes.size() << std::endl;
-    for (int i = 0; i < meshes.size(); ++i){
-        Collision::AABB nRootNode = Collision::rootNodeFromRubixPointsNoPadding(meshAabbPoints[i], glm::mat4(1.0));
-        
-        float normalizedScale = FE_Math::normalizeScale(nRootNode.size, 1.0f); // 1.0 is the area but a .2 pad would be good
-        glm::mat4 normalizedMatrix(1.0); normalizedMatrix = glm::scale(normalizedMatrix, glm::vec3(normalizedScale));
-        
-        Collision::AABB transformedRootNode = Collision::rootNodeFromRubixPointsNoPadding(meshAabbPoints[i], normalizedMatrix);
-        
-        std::vector<Vertex> nVertices = meshes[i].vertices;
-
-        for (int x = 0; x< meshes[i].vertices.size(); ++x)
-            FE_Math::transformPoint(nVertices[x].position, normalizedMatrix);
-        
-        Texture3D* nT3D; nT3D = new Texture3D();
-        meshSDFs.push_back(nT3D);
-        
-        // sdf generate function using voxel accel
-        flouraSDF::bakeMeshSDF(nVertices, meshes[i].indices, transformedRootNode, sliceSize, *meshSDFs.back(), slot);
-        std::cout << "index: " << i << " - " << abs((((meshes.size() -float(i)) - meshes.size()) / meshes.size()) * 100.0f ) << "%"<< std::endl;
-    }
-
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> seconds = end - start;
-    std::cout << "time elapsed (seconds): " << seconds.count() << std::endl;
-}
-
-void Model::SDFgenerateVox(int accelSteps, int accelMinTri, int sliceSize, GLuint slot){
-    if (!loaded) return;
-    
-    if (meshes.size() > FlouraSWRT::localPerModelMeshCountCap){
-        sdfCompatible = false;
-        return;
-    }
-    
-    for (int i = 0; i < meshSDFs.size(); ++i)
-        meshSDFs[i]->Delete();
-    meshSDFs.clear();
-    
-    auto start = std::chrono::steady_clock::now();
-    // should be some kinda hash thingy to check if we have sdf already, and then if so load them from disk
-    // maybe use renderID_index_size.png
-    std::cout << "count: " << meshes.size()<< std::endl;
-    for (int i = 0; i < meshes.size(); ++i){
-        Collision::AABB nRootNode = Collision::rootNodeFromRubixPointsNoPadding(meshAabbPoints[i], glm::mat4(1.0));
-        
-        float normalizedScale = FE_Math::normalizeScale(nRootNode.size, 1.0f); // 1.0 is the area but a .2 pad would be good
-        // min + max * 0.5
-        //glm::vec3 centre = ( (nRootNode.position - nRootNode.size) + (nRootNode.position + nRootNode.size) * 0.5f);
-        
-        glm::mat4 normalizedMatrix(1.0);
-        normalizedMatrix = glm::scale(normalizedMatrix, glm::vec3(normalizedScale));
-        //normalizedMatrix = glm::translate(normalizedMatrix, -centre);
-        
-        Collision::AABB transformedRootNode = Collision::rootNodeFromRubixPointsNoPadding(meshAabbPoints[i], normalizedMatrix);
-        
-        std::vector<Vertex> nVertices = meshes[i].vertices;
-
-        for (int x = 0; x< meshes[i].vertices.size(); ++x)
-            FE_Math::transformPoint(nVertices[x].position, normalizedMatrix);
-        
-        //std::vector<Collision::voxelAccel> nVA = voxelizer::voxelizeMeshKDAccel(meshes[i].vertices, meshes[i].indices, transformedRootNode, accelSteps, accelMinTri, glm::vec3(0.0f), glm::mat4(1.0));
-        std::vector<Collision::voxelAccel> nVA = voxelizer::voxelizeMeshKDAccel(nVertices, meshes[i].indices, transformedRootNode, accelSteps, accelMinTri, glm::vec3(0.0f), glm::mat4(1.0f));
-        
-        Texture3D* nT3D;
-        nT3D = new Texture3D();
-        meshSDFs.push_back(nT3D);
-        
-        
-        // sdf generate function using voxel accel
-        //flouraSDF::bakeMeshSDF(nVertices, meshes[i].indices, transformedRootNode, sliceSize, *meshSDFs.back(), slot);
-        flouraSDF::bakeMeshSDFAccel(nVertices, nVA, transformedRootNode, sliceSize, *meshSDFs.back(), slot);
-        
-        std::cout << "index: " << i << " - " << abs((((meshes.size() -float(i)) - meshes.size()) / meshes.size()) * 100.0f ) << "%"<< std::endl;
-    }
-        
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> seconds = end - start;
-    std::cout << "time elapsed (seconds): " << seconds.count() << std::endl;
-}
-
-void Model::SDFgenerateBlas(int sliceSize, GLuint slot){
+void Model::MDFgenerateBlas(int sliceSize, GLuint slot){
     if (!loaded) return;
     
     if (meshes.size() > FlouraSWRT::localPerModelMeshCountCap){
@@ -345,7 +254,7 @@ void Model::SDFgenerateBlas(int sliceSize, GLuint slot){
         
         // need to scale blas for this
         
-        std::vector<BVH::leaf> nBLAS = meshes[i].blas;
+        std::vector<accelerate::leaf> nBLAS = meshes[i].blas;
         
         // transform blas
         for (int x = 0; x< nBLAS.size(); ++x){
@@ -371,17 +280,21 @@ void Model::SDFgenerateBlas(int sliceSize, GLuint slot){
     std::cout << "time elapsed (seconds): " << seconds.count() << std::endl;
 }
 
-void Model::SDFgeneratePrim(int sliceSize, GLuint slot){
-    if (!loaded) return;
+void Model::MDFgeneratePrimGPU(int sliceSize, GLuint slot, float thickness){
+        if (!loaded) return;
     
-    if (meshes.size() > FlouraSWRT::localPerModelMeshCountCap){
-        sdfCompatible = false;
-        return;
-    }
-    
-    for (int i = 0; i < meshSDFs.size(); ++i)
-        meshSDFs[i]->Delete();
-    meshSDFs.clear();
+        if (meshes.size() > FlouraSWRT::localPerModelMeshCountCap){
+            sdfCompatible = false;
+            return;
+        }
+        
+        for (int i = 0; i < meshSDFs.size(); ++i)
+            meshSDFs[i]->Delete();
+        meshSDFs.clear();
+
+        for (int i = 0; i < meshSDFs2.size(); ++i)
+            meshSDFs2[i]->Delete();
+    meshSDFs2.clear();
     
     auto start = std::chrono::steady_clock::now();
     
@@ -393,8 +306,7 @@ void Model::SDFgeneratePrim(int sliceSize, GLuint slot){
         // min + max * 0.5
         //glm::vec3 centre = ( (nRootNode.position - nRootNode.size) + (nRootNode.position + nRootNode.size) * 0.5f);
         
-        glm::mat4 normalizedMatrix(1.0);
-        normalizedMatrix = glm::scale(normalizedMatrix, glm::vec3(normalizedScale));
+        glm::mat4 normalizedMatrix = glm::scale(glm::mat4(1.0), glm::vec3(normalizedScale));
         //normalizedMatrix = glm::translate(normalizedMatrix, -centre);
         
         Collision::AABB transformedRootNode = Collision::rootNodeFromRubixPointsNoPadding(meshAabbPoints[i], normalizedMatrix);
@@ -404,7 +316,7 @@ void Model::SDFgeneratePrim(int sliceSize, GLuint slot){
         for (int x = 0; x< meshes[i].vertices.size(); ++x)
             FE_Math::transformPoint(nVertices[x].position, normalizedMatrix);
         
-        std::vector<BVH::BVH_primitive> nPrims = BVH::buildIndicesIntoPrims(meshes[i].vertices, meshes[i].indices);
+        std::vector<accelerate::BVH_primitive> nPrims = accelerate::buildIndicesIntoPrims(meshes[i].vertices, meshes[i].indices);
         
         // transform blas
         for (int x = 0; x< nPrims.size(); ++x){
@@ -414,13 +326,19 @@ void Model::SDFgeneratePrim(int sliceSize, GLuint slot){
         
         Texture3D* nT3D; nT3D = new Texture3D();
         meshSDFs.push_back(nT3D);
+        Texture3D* nT3D2; nT3D2 = new Texture3D();
+        meshSDFs2.push_back(nT3D2);
+        //meshSDFs2
+        
         // still pushbak the texture lets just not do anything with it
         if (nPrims.empty()) continue;
+        
+       //
         
         // sdf generate function using voxel accel
         //flouraSDF::bakeMeshSDF(nVertices, meshes[i].indices, transformedRootNode, sliceSize, *meshSDFs.back(), slot);
         //flouraSDF::bakeMeshSDFAccel(nVertices, nVA, transformedRootNode, sliceSize, *meshSDFs.back(), slot);
-        flouraSDF::bakeMeshSDFAccel(nVertices, nPrims, transformedRootNode, sliceSize, *meshSDFs.back(), slot);
+        flouraSDF::bakeMeshDistanceFieldGPU(nVertices, nPrims, transformedRootNode, sliceSize, *meshSDFs.back(), *meshSDFs2.back(), slot, thickness, meshes[i].textures);
         
         std::cout << "index: " << i << " - " << abs((((meshes.size() -float(i)) - meshes.size()) / meshes.size()) * 100.0f ) << "%"<< std::endl;
     }
@@ -430,178 +348,124 @@ void Model::SDFgeneratePrim(int sliceSize, GLuint slot){
     std::cout << "time elapsed (seconds): " << seconds.count() << std::endl;
 }
 
-void Model::VXGgeneratePrim(int sliceSize, GLuint slot){
+void Model::MDFgenerateGridPrimGPU(int sliceSize, GLuint slot, float thickness, int div){
     if (!loaded) return;
     
     if (meshes.size() > FlouraSWRT::localPerModelMeshCountCap){
         sdfCompatible = false;
         return;
     }
-    
-    for (int i = 0; i < meshVXGs.size(); ++i)
-        meshVXGs[i]->Delete();
-    meshVXGs.clear();
+        
+    for (int i = 0; i < meshSDFs.size(); ++i) meshSDFs[i]->Delete();
+    meshSDFs.clear();
+
+    for (int i = 0; i < meshSDFs2.size(); ++i) meshSDFs2[i]->Delete();
+    meshSDFs2.clear();
     
     auto start = std::chrono::steady_clock::now();
     
-    std::cout << "Amount to generate: " << meshes.size() << std::endl;
-    for (int i = 0; i < meshes.size(); ++i){
-        Collision::AABB nRootNode = Collision::rootNodeFromRubixPointsNoPadding(meshAabbPoints[i], glm::mat4(1.0));
+    // yea i know bad, but im lazy
+    // build model brounds
+    std::vector<glm::vec3> points; 
+    for (int i = 0; i < meshAabbPoints.size(); ++i){
+        points.push_back(meshAabbPoints[i].URF);
+        points.push_back(meshAabbPoints[i].ULF);
+        points.push_back(meshAabbPoints[i].URB);
+        points.push_back(meshAabbPoints[i].ULB);
         
-        float normalizedScale = FE_Math::normalizeScale(nRootNode.size, 1.0f); // 1.0 is the area but a .2 pad would be good
-        // min + max * 0.5
-        //glm::vec3 centre = ( (nRootNode.position - nRootNode.size) + (nRootNode.position + nRootNode.size) * 0.5f);
-        
-        glm::mat4 normalizedMatrix(1.0);
-        normalizedMatrix = glm::scale(normalizedMatrix, glm::vec3(normalizedScale));
-        //normalizedMatrix = glm::translate(normalizedMatrix, -centre);
-        
-        Collision::AABB transformedRootNode = Collision::rootNodeFromRubixPointsNoPadding(meshAabbPoints[i], normalizedMatrix);
-        
-        std::vector<Vertex> nVertices = meshes[i].vertices;
-
-        for (int x = 0; x< meshes[i].vertices.size(); ++x)
-            FE_Math::transformPoint(nVertices[x].position, normalizedMatrix);
-        
-        std::vector<BVH::BVH_primitive> nPrims = BVH::buildIndicesIntoPrims(meshes[i].vertices, meshes[i].indices);
-        
-        // transform blas
-        for (int x = 0; x< nPrims.size(); ++x){
-            nPrims[x].extents = Collision::rootNodeFromRubixPointsNoPadding(Collision::aabbToRubixCubePoints(nPrims[x].extents.position, nPrims[x].extents.size), normalizedMatrix);
-            //std::cout<<nBLAS[x].prims.size() << std::endl;
-        }
-        
-        Texture3D* nT3D; nT3D = new Texture3D();
-        meshVXGs.push_back(nT3D);
-        // still pushbak the texture lets just not do anything with it
-        if (nPrims.empty()) continue;
-        
-        voxelizer::bakeMeshVXGAccel(nVertices, nPrims, transformedRootNode, sliceSize, *meshVXGs.back(), slot, 
-            meshes[i].textures);
-        
-        std::cout << "index: " << i << " - " << abs((((meshes.size() -float(i)) - meshes.size()) / meshes.size()) * 100.0f ) << "%"<< std::endl;
+        points.push_back(meshAabbPoints[i].DRF);
+        points.push_back(meshAabbPoints[i].DLF);
+        points.push_back(meshAabbPoints[i].DRB);
+        points.push_back(meshAabbPoints[i].DLB);
     }
+    Collision::AABB meshBounds = Collision::createAABBfromPoints(points);
+    // uniform grid gen
+    std::vector<Collision::AABB> cells;
+    accelerate::uniformSplitEmptySpace(cells, meshBounds.position, meshBounds.size, div); // settle for splits in model bounds, and then normalize each cell themsleves
         
+    std::cout << "Amount to attempt to generate: " << cells.size() << std::endl;
+    for (int i = 0; i < cells.size(); ++i){
+        std::vector<Mesh*> nMeshes;
+        std::vector<glm::mat4> nLocalTrans;
+        
+        // tag touching nodes and meshes (could try isolating tagged meshes)
+        for (int x = 0; x < meshes.size(); ++x){
+            Collision::AABB nRootNode = Collision::rootNodeFromRubixPointsNoPadding(meshAabbPoints[x], glm::mat4(1.0)); // glm::mat4(1.0)
+            Collision::HitResult hr = Collision::AABBvsAABB(nRootNode.position, nRootNode.size, cells[i].position, cells[i].size);
+            if (hr.isColliding || true){ // temporary
+                nMeshes.push_back(&meshes[x]);
+                nLocalTrans.push_back(lModelMatrix[x]);
+                //std::cout << x <<std::endl;
+            }
+        }
+        if (nMeshes.empty()) continue;
+        
+        std::cout << "nmesh size: " << nMeshes.size() << std::endl;
+        
+        float normalizedScale = FE_Math::normalizeScale(cells[i].size, 1.0f);
+        //glm::mat4 normalizedMatrix(1.0); // small in a corner????
+        glm::mat4 normalizedMatrix = glm::scale(glm::mat4(1.0), glm::vec3(normalizedScale)); // commenting this out brings me more so 
+        
+   //     Collision::AABB normalizedRootNode = Collision::rootNodeFromRubixPointsNoPadding(
+   //     Collision::aabbToRubixCubePoints(meshBounds.position, meshBounds.size), normalizedMatrix);
+
+        Collision::AABB normalizedRootNode = Collision::rootNodeFromRubixPointsNoPadding(
+        Collision::aabbToRubixCubePoints(cells[i].position, cells[i].size), normalizedMatrix);
+        
+        bool cellCreation = false;
+        // now where we actually do every mesh
+        for (int x = 0; x < nMeshes.size(); ++x){
+            std::vector<Vertex> nVertices = nMeshes[x]->vertices;
+
+            //nMeshes
+
+            for (int z = 0; z< nVertices.size(); ++z)
+                FE_Math::transformPoint(nVertices[z].position, normalizedMatrix * nLocalTrans[x]);
+            
+            std::vector<accelerate::BVH_primitive> nPrims = accelerate::buildIndicesIntoPrims(nVertices, nMeshes[x]->indices);
+            if (nPrims.empty()) continue;
+            
+            // temporary
+            // transform blas
+            //for (int z = 0; z< nPrims.size(); ++z)
+            //    nPrims[z].extents = Collision::rootNodeFromRubixPointsNoPadding(Collision::aabbToRubixCubePoints(nPrims[z].extents.position, nPrims[z].extents.size), normalizedMatrix);
+            
+            // triangle test (commented out temporarily)
+            /*
+            bool hitPrim = false;
+            for (int z = 0; z < nPrims.size(); ++z){
+                Collision::HitResult hr = Collision::AABBvsAABB(nPrims[z].extents.position, nPrims[z].extents.size, cells[i].position, cells[i].size);
+                if (!hr.isColliding) continue;
+                hitPrim = true;// break; // if any hit then we break
+            }
+            if (!hitPrim) continue;
+            */
+            
+            
+            // if even one mesh has a triangle inside, counter will be one and we create volume, itll go over one if theres more than 1 mesh hit
+            bool isnotFirst(cellCreation);
+            if (!isnotFirst){
+                Texture3D* nT3D; nT3D = new Texture3D();
+                meshSDFs.push_back(nT3D);
+                Texture3D* nT3D2; nT3D2 = new Texture3D();
+                meshSDFs2.push_back(nT3D2);
+                cellCreation = true;
+                
+                mdfNodes.push_back(cells[i]);
+                
+            }
+            if (meshSDFs.empty() || meshSDFs2.empty()) continue;
+            
+            flouraSDF::bakeMeshDistanceFieldGridGPU(nVertices, nPrims, normalizedRootNode, sliceSize, *meshSDFs.back(), *meshSDFs2.back(), slot, thickness, nMeshes[x]->textures, isnotFirst);
+            
+            std::cout << "cell: " << i <<  "- mesh index: " << x << " - " << abs((((nMeshes.size() -float(x)) - nMeshes.size()) / nMeshes.size()) * 100.0f ) << "%"<< std::endl;
+        }
+        std::cout << "cell index: " << i << " - " << abs((((cells.size() -float(i)) - cells.size()) / cells.size()) * 100.0f ) << "%"<< std::endl;
+    }
+    
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> seconds = end - start;
     std::cout << "time elapsed (seconds): " << seconds.count() << std::endl;
-}
-
-void Model::VXGgenerateBlas(int sliceSize, GLuint slot){
-        if (!loaded) return;
-    
-    if (meshes.size() > FlouraSWRT::localPerModelMeshCountCap){
-        sdfCompatible = false;
-        return;
-    }
-    
-    for (int i = 0; i < meshVXGs.size(); ++i)
-        meshVXGs[i]->Delete();
-    meshVXGs.clear();
-    
-    auto start = std::chrono::steady_clock::now();
-    // should be some kinda hash thingy to check if we have sdf already, and then if so load them from disk
-    // maybe use renderID_index_size.png
-    std::cout << "count: " << meshes.size()<< std::endl;
-    for (int i = 0; i < meshes.size(); ++i){
-        Collision::AABB nRootNode = Collision::rootNodeFromRubixPointsNoPadding(meshAabbPoints[i], glm::mat4(1.0));
-        
-        float normalizedScale = FE_Math::normalizeScale(nRootNode.size, 1.0f); // 1.0 is the area but a .2 pad would be good
-        // min + max * 0.5
-        //glm::vec3 centre = ( (nRootNode.position - nRootNode.size) + (nRootNode.position + nRootNode.size) * 0.5f);
-        
-        glm::mat4 normalizedMatrix(1.0);
-        normalizedMatrix = glm::scale(normalizedMatrix, glm::vec3(normalizedScale));
-        //normalizedMatrix = glm::translate(normalizedMatrix, -centre);
-        
-        Collision::AABB transformedRootNode = Collision::rootNodeFromRubixPointsNoPadding(meshAabbPoints[i], normalizedMatrix);
-        
-        std::vector<Vertex> nVertices = meshes[i].vertices;
-
-        for (int x = 0; x< meshes[i].vertices.size(); ++x)
-            FE_Math::transformPoint(nVertices[x].position, normalizedMatrix);
-        
-        // need to scale blas for this
-        
-        std::vector<BVH::leaf> nBLAS = meshes[i].blas;
-        
-        // transform blas
-        for (int x = 0; x< nBLAS.size(); ++x){
-            nBLAS[x].aabb = Collision::rootNodeFromRubixPointsNoPadding(Collision::aabbToRubixCubePoints(nBLAS[x].aabb.position, nBLAS[x].aabb.size), normalizedMatrix);
-        }
-        
-        Texture3D* nT3D;
-        nT3D = new Texture3D();
-        meshVXGs.push_back(nT3D);
-        // still pushbak the texture lets just not do anything with it
-        if (nBLAS.empty()) continue;
-        
-        // sdf generate function using voxel accel
-        //flouraSDF::bakeMeshSDF(nVertices, meshes[i].indices, transformedRootNode, sliceSize, *meshSDFs.back(), slot);
-        //flouraSDF::bakeMeshSDFAccel(nVertices, nVA, transformedRootNode, sliceSize, *meshSDFs.back(), slot);
-        voxelizer::bakeMeshVXGAccel(nVertices, nBLAS, transformedRootNode, sliceSize, *meshVXGs.back(), slot,
-        meshes[i].textures);
-        
-        std::cout << "index: " << i << " - " << abs((((meshes.size() -float(i)) - meshes.size()) / meshes.size()) * 100.0f ) << "%"<<"\n";
-    }
-        
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> seconds = end - start;
-    std::cout << "time elapsed (seconds): " << seconds.count() << std::endl;
-}
-
-void Model::createVoxelMesh(int steps, int minTri, glm::vec3 minSize, bool doVertexSnap)
-{
-    if (!loaded) return;
-    for (size_t i = 0; i < meshes.size(); i++){
-        Collision::AABB nRootNode = Collision::rootNodeFromRubixPoints(meshAabbPoints[i], lModelMatrix[i]);
-        std::vector<Collision::AABB> nAABS = voxelizer::voxelizeMeshKD(meshes[i].vertices, meshes[i].indices, nRootNode, steps, minTri, minSize, doVertexSnap, lModelMatrix[i]);
-        
-        // I know this is terrible logic, but im tired and for looping though this is easier than modifying the voxelizer functions
-        std::vector<voxelizer::voxelObj> vObjArray;
-        for (int z = 0; z < nAABS.size(); ++z){
-            voxelizer::voxelObj nVOBJ;
-            nVOBJ.voxel = nAABS[z];
-            nVOBJ.material.albedo = glm::vec4(1.0f);
-            nVOBJ.material.arm = glm::vec3(1.0f, 0.0f, 1.0f);
-            nVOBJ.material.emission = glm::vec3(0.0f);
-            vObjArray.push_back(nVOBJ);
-        }
-        
-        VoxelMeshes.push_back(vObjArray);
-    }
-}
-
-void Model::createVoxelModel(int steps, int minTri, glm::vec3 minSize)
-{
-    if (!loaded) return;
-    std::vector<Vertex> nvertices;
-    std::vector<GLuint> nindices;
-    GLuint indicieOffset = 0;
-    for (size_t i = 0; i < meshes.size(); i++){
-        
-        // mesh comb
-        for (int x = 0; x < meshes[i].vertices.size(); ++x)
-            nvertices.push_back(meshes[i].vertices[x]);
-        for (int y = 0; y < meshes[i].indices.size(); ++y)
-            nindices.push_back(meshes[i].indices[y] + indicieOffset);
-        indicieOffset = nvertices.size();         // set offset at end of mesh
-    }
-    
-    std::vector<Collision::AABB> nAABS = voxelizer::voxelizeMeshKD(nvertices, nindices, ModelBounds, steps, minTri, minSize, false, glm::mat4(1.0));
-    
-    // I know this is terrible logic, but im tired and for looping though this is easier than modifying the voxelizer functions
-    std::vector<voxelizer::voxelObj> vObjArray;
-    for (int z = 0; z < nAABS.size(); ++z){
-        voxelizer::voxelObj nVOBJ;
-        nVOBJ.voxel = nAABS[z];
-        nVOBJ.material.albedo = glm::vec4(1.0f);
-        nVOBJ.material.arm = glm::vec3(1.0f, 0.0f, 1.0f);
-        nVOBJ.material.emission = glm::vec3(0.0f);
-        vObjArray.push_back(nVOBJ);
-    }
-    
-    VoxelMeshes.push_back(vObjArray);
 }
 
 void Model::updateMeshAABBs(){
@@ -612,8 +476,7 @@ void Model::updateMeshAABBs(){
     }
 }
 
-void Model::loadModel(std::string path)
-{
+void Model::loadModel(std::string path){
     if (loaded) return; // prevent loading loop
     
     loaded = true; // im putting this first to avoid any loading loops with the load function i wanna use
@@ -674,15 +537,17 @@ void Model::processPositions(aiNode* node){
 }
 
 Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene){
+    Mesh nMesh;
     // primary mesh data extraction
     std::vector<Vertex> vertices = assembleVertices(mesh);
     std::vector<GLuint> indices = assembleIndices(mesh);
     std::vector<Texture> textures = assembleMaterials(mesh, scene);
     
+    nMesh.HasBones = mesh->HasBones();
+    
     ExtractBoneWeightForVertices(vertices, mesh, scene);
     
     aiString name = mesh->mName;
-    Mesh nMesh;
 	nMesh.name = name.C_Str();
     //std::cout << "disableInitialMeshUploadToVBOFlag: " << disableInitialMeshUploadToVBOFlag << std::endl;
     if (disableInitialMeshUploadToVBOFlag) nMesh.suppressSetupMeshCall = true; // if flag is enabled, suppress uploading to the gpu
@@ -822,8 +687,7 @@ std::vector<GLuint> Model::assembleIndices(aiMesh* mesh){
 std::vector<Texture> Model::assembleMaterials(aiMesh* mesh, const aiScene* scene){
     std::vector<Texture> textures;
     
-    if (mesh->mMaterialIndex >= 0) // needs to check material type like "vec4 col instead of texture"
-    {
+    if (mesh->mMaterialIndex >= 0){ // needs to check material type like "vec4 col instead of texture"
 
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 

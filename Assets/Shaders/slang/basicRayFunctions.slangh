@@ -1,5 +1,4 @@
-﻿float3 rayDirfromCam(float4x4 projection, float4x4 view, float2 uv)
-{
+﻿float3 rayDirfromCam(float4x4 projection, float4x4 view, float2 uv){
     float4 target = mul(projection, float4(uv.x, uv.y, -1.0, 1.0));
     float3 rayDirView = normalize(target.xyz / target.w);
     float3 rayDirWorld = normalize(mul(float3x3(view), rayDirView));

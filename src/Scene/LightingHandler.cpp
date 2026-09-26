@@ -97,7 +97,7 @@ void drawSM(unsigned int & FBO, unsigned int w, unsigned int h)
 	
 }
 
-void LightingHandler::drawShadowMap(Model*& model) {
+void LightingHandler::drawShadowMap(Model*& model, int drawIndex) {
 	if (!doDirShadowMap || framePause) {return;}
 
 	glm::mat4 orthgonalProjection = glm::ortho(-distance, distance, -distance, distance, dirNearFar.x, dirNearFar.y); // last two are near and far 
@@ -123,6 +123,7 @@ void LightingHandler::drawShadowMap(Model*& model) {
 	LightingHandler::dirShadowMapProgram.setBool("animateBinaryAlpha", RenderClass::animateBinaryAlpha);
 	LightingHandler::dirShadowMapProgram.setHandleui64ARB("bayerMatrixHandle", RenderClass::bayermatrix->handle);
 	LightingHandler::dirShadowMapProgram.setHandleui64ARB("BlueNoiseHandle", RenderClass::bluenoise->handle);
+	LightingHandler::dirShadowMapProgram.setInt("drawIndex", drawIndex);
 	
 	
 	dirShadowMapProgram.setTimeVariables();
@@ -264,8 +265,7 @@ void LightingHandler::update(){
 
 }
 
-void LightingHandler::createLight()
-{
+void LightingHandler::createLight(){
 	Light tempLight;
 	
 	tempLight.position = glm::vec3(0);
@@ -282,8 +282,7 @@ void LightingHandler::createLight()
 	LogConsole::print("Created LightObject");
 }
 
-void LightingHandler::deleteLight(int index)
-{
+void LightingHandler::deleteLight(int index){
 	Lights.erase(Lights.begin() + index);
 	raytracer::RTGlobalTransformFlag = true;
 	LogConsole::print("Deleted LightObject at index: " + std::to_string(index));
@@ -291,8 +290,7 @@ void LightingHandler::deleteLight(int index)
 	//IdManager::lowestLightIndexSync(); // sync up the index after deletion because the array has now changed
 }
 
-void LightingHandler::loadScene(std::string path)
-{
+void LightingHandler::loadScene(std::string path){
 	LightingHandler::deleteScene();
 
 	std::ifstream file(path);

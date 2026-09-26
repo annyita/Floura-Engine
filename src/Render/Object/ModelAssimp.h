@@ -81,25 +81,19 @@ public:
 	
 	void generateMeshBlases(int mintri, int maxDepth);
 	
-	void SDFgenerate(int sliceSize, GLuint slot);
-	void SDFgenerateVox(int accelSteps, int accelMinTri, int sliceSize, GLuint slot);
-	void SDFgenerateBlas(int sliceSize, GLuint slot);
-	void SDFgeneratePrim(int sliceSize, GLuint slot);
-	void VXGgeneratePrim(int sliceSize, GLuint slot);
-	void VXGgenerateBlas(int sliceSize, GLuint slot);
-	
-	void createVoxelMesh(int steps, int minTri, glm::vec3 minSize, bool doVertexSnap);
-	void createVoxelModel(int steps, int minTri, glm::vec3 minSize);
-	
+	void MDFgenerateBlas(int sliceSize, GLuint slot);
+	void MDFgeneratePrimGPU(int sliceSize, GLuint slot, float thickness);
+	void MDFgenerateGridPrimGPU(int sliceSize, GLuint slot, float thickness, int div);
+
 	void updateMeshAABBs();
 
 	// AABBS position stored in local space
 	std::vector<Collision::AABB> rootnodes;
 	Collision::AABB ModelBounds;
-	///std::vector<std::vector<Collision::AABB>> VoxelMeshes;
-	std::vector<std::vector<voxelizer::voxelObj>> VoxelMeshes;
+	int mdfFormation = 0;
+	std::vector<Collision::AABB> mdfNodes;
 	std::vector<Texture3D *> meshSDFs;
-	std::vector<Texture3D *> meshVXGs;
+	std::vector<Texture3D *> meshSDFs2;
 	std::vector<Mesh> meshes;
 	std::vector<Collision::rubiksCubePoints> meshAabbPoints;
 

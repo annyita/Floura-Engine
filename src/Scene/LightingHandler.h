@@ -58,7 +58,7 @@ public:
 	
 	static void setupShadowMapBuffer();
 
-	static void drawShadowMap(Model*& model);
+	static void drawShadowMap(Model*& model, int drawIndex);
 
 	static void drawShadowMapBillboard(BillBoard*& bilboard, glm::vec3 translation, glm::vec3 scale);
 

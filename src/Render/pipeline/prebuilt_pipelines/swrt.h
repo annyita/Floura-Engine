@@ -4,9 +4,15 @@
 #include <Render/Shader/shaderClass.h>
 #include <Render/Object/texture3D.h>
 #include <Render/Buffer/Framebuffer.h>
+#include <Systems/Physics/accelerate.h>
 
 class FlouraSWRT {
 public:
+    struct gdfDrawbatch{
+        int resolution = 1;
+       GLuint ID = 0;
+        GLuint ID2 = 0;
+    };
     
     struct localSDF{
         glm::vec4 position; // uv.x
@@ -20,16 +26,29 @@ public:
         
         uint64_t instanceUUID;
         uint64_t SDF_Handle;
+        uint64_t ALB_Handle;
+        uint64_t padding;
         
-        uint64_t texture_diffuse_Handle;
-        uint64_t texture_roughness_Handle;
-        uint64_t texture_normal_Handle;
-        uint64_t texture_emission_Handle;
+        //uint64_t texture_diffuse_Handle;
+        //uint64_t texture_roughness_Handle;
+        //uint64_t texture_normal_Handle;
+        //uint64_t texture_emission_Handle;
     };
 
     static  int localPerModelMeshCountCap;
     
     static std::vector<localSDF> localSDFS;
+    
+    static Texture3D* ring0; 
+    static Texture3D* ring1; 
+    static Texture3D* ring2; 
+    static Texture3D* ring3;
+    static Texture3D* ring0A; 
+    static Texture3D* ring1A; 
+    static Texture3D* ring2A; 
+    static Texture3D* ring3A;
+    static std::vector<accelerate::clipmapLevel> clips;
+    static std::vector<gdfDrawbatch> gdfINFO;
     
     struct probeChunk{
         Texture3D* indirectVolume;
@@ -43,12 +62,10 @@ public:
     static bool doTemporalAccumulation;
     static bool doSVGF;
     static bool doDenoiseSplitDBGView;
-    static int denoiseRadius;
     static float temporalAccumulationBlendFactor;
-    static int resScaleFactor;
-    
-    static bool doHalfRes;
-    
+    static float resScaleFactor;
+    static int passNum;
+    static int autoMDFres;
     static double rmTime;
     
     
@@ -77,6 +94,7 @@ private:
     static Shader pingPongShader;
     //static Shader pingPongCompShader;
     static Shader presentShader;
+    static Shader GDFdrawShader;
 public:
     
     static probeChunk testChunk;
@@ -99,19 +117,35 @@ public:
     
     // lets do buffers down here
     static GLuint localSDF_SSBOID;
+    static GLuint GDF_SSBOID;
     
     static void initSWRTssbo();
     static void cleanupSWRTssbo();
     
     static void updateSDFBuffer();
+    static void updateGDFBuffer();
     
     static void wipeScene();
     
     static void uploadToLSDFScene(uint64_t instanceUUID);
     static void removeFromLSDFScene(uint64_t instanceUUID);
     
-    static void updateUVscale(uint64_t instanceUUID, glm::vec2& scale);
+    //static void updateUVscale(uint64_t instanceUUID, glm::vec2& scale);
     static void updateGlobalTransformation(uint64_t instanceUUID, glm::mat4& gt, glm::vec3 gRotation);
+    
+    // mostly GDF
+    static float gdfAccumthresh;
+    static float clipAccum;
+    
+    static void update();
+    static void MDFdebugDraw();
+    static void GDFdebugDraw();
+    
+    static bool dirtyGDF;
+    static float gdfAccum;
+    static float clipAccumthresh;
+    
+    static void GDFdraw();
     
 };
 

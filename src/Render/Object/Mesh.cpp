@@ -7,6 +7,8 @@
 #include "Systems/util/UUID.h"
 #include <Render/render_util/meshTools.h>
 
+#include "Render/Handler/RenderHandler.h"
+
 
 void Mesh::create(std::vector<Vertex>& vertices, std::vector<GLuint>& indices, std::vector<Texture>& textures){
     UUID = UUID::returnHandle();
@@ -47,7 +49,7 @@ void Mesh::createWithoutTexture(std::vector<Vertex>& vertices, std::vector<GLuin
 }
 
 void Mesh::genBlas(int mintri, int maxDepth){
-    blas = BVH::blasGenKDAccel(vertices, indices, mintri, maxDepth, glm::mat4(1.0f));
+    blas = accelerate::blasGenKDAccel(vertices, indices, mintri, maxDepth, glm::mat4(1.0f));
 }
 
 void Mesh::bindMaterial(Shader& shader){
@@ -108,8 +110,6 @@ void Mesh::draw(Shader& shader, Camera Camera){
     //glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    
-    
     // Draw the mesh
 
     size_t count = indices.size();
@@ -154,8 +154,7 @@ void Mesh::drawInstanced(Shader& shader, Camera Camera, int instanceCount){
     std::cout << "drawing instance" << instanceCount << std::endl;
 }
 
-void Mesh::setupMesh()
-{
+void Mesh::setupMesh(){
     VAO.Bind();
     
     nVBO.generateVBO(vertices);
@@ -166,13 +165,14 @@ void Mesh::setupMesh()
     // first is slot then how many varables, these are all vec3 and 2
     VAO.LinkAttrib(nVBO, 0, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(Vertex, position));
     VAO.LinkAttrib(nVBO, 1, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(Vertex, normal));
-    VAO.LinkAttrib(nVBO, 2, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(Vertex, color));
+    //VAO.LinkAttrib(nVBO, 2, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(Vertex, color));
     VAO.LinkAttrib(nVBO, 3, 2, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(Vertex, texUV));
     VAO.LinkAttrib(nVBO, 4, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(Vertex, tangent));
     VAO.LinkAttrib(nVBO, 5, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(Vertex, biTangent));
-    VAO.LinkAttribI(nVBO, 6, 4, GL_INT, stride, (void*)offsetof(Vertex, m_BoneIDs));
-    VAO.LinkAttrib(nVBO, 7, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(Vertex, m_Weights));
-    
+    if (HasBones){
+        VAO.LinkAttribI(nVBO, 6, 4, GL_INT, stride, (void*)offsetof(Vertex, m_BoneIDs));
+        VAO.LinkAttrib(nVBO, 7, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(Vertex, m_Weights));
+    }
     VAO.Unbind();
     nVBO.Unbind();
     nEBO.Unbind();

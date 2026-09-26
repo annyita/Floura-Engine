@@ -9,6 +9,7 @@ in highp vec2 texCoord;
 
 // geometry
 uniform highp sampler2D screentexture;
+uniform sampler2D gAlbedo;
 uniform sampler2D gNormal;
 uniform sampler2D depthMap;
 uniform highp sampler2D gVelocity;
@@ -65,10 +66,19 @@ void main(){
         return;
     }
     
+    float blend = 0.90;
+    
+    //gAlbedo
+    float alpha = texture(gAlbedo, texCoord).a;
+    if (alpha < 1.0) blend = 0.95;
+    
+    // add in motion adaptive blending
+    
     vec3 previousColour = texture(hColour, historyTexCoord).rgb;
     vec3 previousColourClamped = colourClamp(1, previousColour);
+
     
-    float blendFactor = 0.9;
-    vec3 accumulated = mix(vec3(screen), previousColourClamped, blendFactor);
+    vec3 accumulated = mix(vec3(screen), previousColourClamped, blend);
+    //vec3 accumulated = mix(vec3(screen), previousColour, 0.95); // accumulation for testing
     FragColor = vec4(accumulated, 1.0);
 }

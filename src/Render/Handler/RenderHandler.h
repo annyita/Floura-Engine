@@ -30,7 +30,6 @@ public:
 		uint64_t shaderUUID;
 		uint64_t gpShaderUUID;
 		uint64_t entityUUID;
-		float smoothnessValue;
 		int isInstanced; // will come into play way later
 		glm::vec3 position;
 		glm::vec3 rotation;
@@ -47,14 +46,15 @@ public:
 		bool castsShadow;
 	};
 
-	struct batchOfUUID
-	{
+	struct batchOfUUID{
 		uint64_t RenderID;
 		uint64_t instanceUUID;
 	};
 
 	static bool renderENV;
 	
+	static int drawCount;
+
 	static std::vector<modelObject> models;
 
 	static std::vector<renderQueueData> renderQueueDataVector;
@@ -89,7 +89,6 @@ public:
 private:
 
 	static Shader cmShader;
-	
 
 	static void cmDraw(std::vector<renderQueueData> rqdVector, Cubemap*& cm, Shader& shader, glm::vec2 resolution, glm::vec3 pos, float range);
 

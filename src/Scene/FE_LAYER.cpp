@@ -12,7 +12,7 @@
 #include "Render/Handler/RenderHandler.h"
 #include "utils/timeUtil.h"
 #include "Systems/Physics/physworld.h"
-#include <Systems/Physics/BVH.h>
+#include <Systems/Physics/accelerate.h>
 
 #include "Systems/Physics/SDF.h"
 
@@ -25,8 +25,13 @@ uint64_t victimPointID = 0;
 
 Shader temporaryTerrainShader;
 int size = 50;
-
+//Collision::octSplit osv;
+//std::vector<Collision::AABB> aabbs;
 void FE_LAYER::init(){
+	//glm::vec3 p(0.0f); glm::vec3 e(20.0f);
+	//voxelizer::octSplitEmptySpace(aabbs, p, e, 2);
+	//voxelizer::uniformSplitEmptySpace(aabbs, p, e, 4);
+	//osv = Collision::octSplitVolume(glm::vec3(0.0), glm::vec3(3.0, 3.0, 5.0));
 	/*
 	std::vector<Texture3D*> nTA;
 	Texture3D nTexture;
@@ -143,6 +148,7 @@ void FE_LAYER::init(){
 
 //glm::vec3 position = glm::vec3(0.0f, 0.0f, 2.0f);
 void FE_LAYER::Update(){
+	
 	return;
 	glm::vec3 pPos = glm::vec3(0.0f, 0.0f, 0.0f);
 	
@@ -208,63 +214,26 @@ void FE_LAYER::Update(){
 
 }
 void FE_LAYER::onBeginningOfFrame(){
-	return;
-}
-
-// https://www.shadertoy.com/view/WfdXD7 thanks
-static float hash11(float p) {
-	p = glm::fract(glm::fract(p) * .1031);
-	p *= p + 33.33;
-	return glm::fract(p*p*2.);
-}
-
-static glm::vec3 hash33(glm::vec3 p) {
-	glm::vec3 np = glm::vec3(0.0f);
-	//x
-	p.x = glm::fract(glm::fract(p.x) * .1031);
-	p.x *= p.x + 33.33;
-	np.x = glm::fract(p.x*p.x*2.);
-	//y
-	p.y = glm::fract(glm::fract(p.y) * .1031);
-	p.y *= p.y + 33.33;
-	np.y = glm::fract(p.y*p.y*2.);
-	//z
-	p.z = glm::fract(glm::fract(p.z) * .1031);
-	p.z *= p.z + 33.33;
-	np.z = glm::fract(p.z*p.z*2.);
-	
-	return np;
 }
 
 void FE_LAYER::draw(){
-	return;
-	//return;
-	//temp
-	for (int i = 0; i < Scene::entityObjects.size(); ++i) 
-		if (pivotPointID == Scene::entityObjects[i]->UUID){
-			int mIndex = RenderHandler::fetchModelIndex(Scene::entityObjects[i]->component.render.renderID);
-			for (int z = 0; z < 	RenderHandler::models[mIndex].model->VoxelMeshes.size(); ++z){
-				for (int x = 0; x < RenderHandler::models[mIndex].model->VoxelMeshes[z].size(); ++x){
-					//RenderHandler::models[mIndex].model->VoxelMeshes[z][x].position;
-					glm::mat4  voxelMatrix = FE_Math::composeMatrixWDegrees(RenderHandler::models[mIndex].model->VoxelMeshes[z][x].voxel.position, RenderHandler::models[mIndex].model->VoxelMeshes[z][x].voxel.size, glm::vec3(0.0f));
-					glm::mat4  gModelMatrix = FE_Math::composeMatrixWDegrees(
-						RenderHandler::models[mIndex].model->globalTransformation.position,
-						RenderHandler::models[mIndex].model->globalTransformation.scale,
-						RenderHandler::models[mIndex].model->globalTransformation.rotation
-						);
-					glm::vec3 rColour = hash33(RenderHandler::models[mIndex].model->VoxelMeshes[z][x].voxel.position);
-					CubeVisualizer::draw(gModelMatrix * voxelMatrix, rColour, 1.0, false, false);
-				}
-			}
-		}
+	//CubeVisualizer::draw(glm::vec3(0.0), glm::vec3(20.0), glm::vec3(1.0, 0.0, 0.0), 3.5, true, false);
+
+	//for (int i = 0; i < aabbs.size(); ++i)
+	//	CubeVisualizer::draw(aabbs[i].position, aabbs[i].size, glm::vec3(1.0), 0.5, true, false);
+	/*
+
+	CubeVisualizer::draw(osv.splitTRF, osv.size, glm::vec3(1.0), 0.5, true, false);
+	CubeVisualizer::draw(osv.splitTLF, osv.size, glm::vec3(1.0), 0.5, true, false);
+	CubeVisualizer::draw(osv.splitTRB, osv.size, glm::vec3(1.0), 0.5, true, false);
+	CubeVisualizer::draw(osv.splitTLB, osv.size, glm::vec3(1.0), 0.5, true, false);
 	
-	return;
-	
-//	t->pointDraw();
+	CubeVisualizer::draw(osv.splitDRF, osv.size, glm::vec3(1.0), 0.5, true, false);
+	CubeVisualizer::draw(osv.splitDLF, osv.size, glm::vec3(1.0), 0.5, true, false);
+	CubeVisualizer::draw(osv.splitDRB, osv.size, glm::vec3(1.0), 0.5, true, false);
+	CubeVisualizer::draw(osv.splitDLB, osv.size, glm::vec3(1.0), 0.5, true, false);
+	*/
 }
 
-void FE_LAYER::Delete()
-{
-	//delete cube;
-	//cube = nullptr;
+void FE_LAYER::Delete(){
 }

@@ -10,7 +10,7 @@
 #include "Render/Object/Texture.h"
 #include <xhash>
 #include <camera/Camera.h>
-#include <Systems/Physics/BVH.h>
+#include <Systems/Physics/accelerate.h>
 
 class Mesh {
 
@@ -60,12 +60,13 @@ class Mesh {
 	bool generateLod = false;
 	int forceLodLevel = -1; // -1 = off
 	bool created = false;
+	bool HasBones = false;
 	float transitionDistance = 5.0f;
 	
 	// exposed for threadding
 	void setupMesh();
 	
-	std::vector<BVH::leaf> blas;
+	std::vector<accelerate::leaf> blas;
 	Collision::rubiksCubePoints meshAabbPoints;
     
 private:

@@ -33,14 +33,12 @@ public:
 	static void init();
 
 	static void loadSceneStateless(std::string path);
-
 	static void loadScene(std::string path);
 
-	static void reloadScene(std::string path);
-
 	static void saveSceneStateless(std::string path);
-
 	static void saveScene(std::string path);
+	
+	static void reloadScene(std::string path);
 
 	static void enviromentSave(std::string path);
 

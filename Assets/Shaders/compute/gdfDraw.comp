@@ -1,0 +1,205 @@
+﻿#version 460 core
+
+#extension GL_ARB_gpu_shader_int64 : enable
+#extension GL_ARB_bindless_texture : require
+
+#define INF 3.40282347e+38f
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z =8) in;
+//layout(rgba32f, binding = 0) uniform image3D outGDF;
+layout(rgba16f, binding = 0) uniform image3D outGDF;
+//layout(r8_snorm, binding = 0) uniform image3D outGDF;
+layout(rgba8, binding = 1) uniform image3D outALB;
+
+struct MDF{
+    vec4 position;  // uv.x
+    vec4 extents;  // uv.y
+    vec4 rootPosition;
+    vec4 rootExtents;
+    vec4 gPosition;
+    vec4 gExtents;
+//vec4 gRotation;
+    mat4 globalTransform;
+
+    uint64_t instanceUUID;
+    sampler3D SDF_Handle;
+    sampler3D ALB_Handle;
+    uint64_t padding;
+
+    //sampler2D texture_diffuse_Handle;
+    //sampler2D texture_roughness_Handle;
+    //sampler2D texture_normal_Handle;
+    //sampler2D texture_emission_Handle;
+};
+
+// mesh distance fields
+layout(std430, binding = 11) buffer MDF_Buffer {
+    MDF MDFS[];
+};
+
+uniform ivec3 volumeSize;
+uniform vec4 positionScale;
+
+bool intersectAABB(vec3 pA, vec3 sA, vec3 pB, vec3 sB){
+    vec3 halfA = sA * 0.5;
+    vec3 halfB = sB * 0.5;
+    
+    vec3 diff = abs(pA - pA);
+    
+    vec3 minDist = halfA + halfB;
+    
+    return all(lessThan(diff, minDist));
+}
+
+float texture3DSDF(vec3 p, vec3 s, sampler3D handle){
+    vec3 distance = abs(p) - s;
+
+    float outsideDistance = length(max(distance, 0.0));
+
+    // map coords to 3d uv space
+    vec3 uvw = (p / (s* 2.0)) + 0.5;
+
+    float SDF = textureLod(handle, uvw, 0).r;
+
+    if (outsideDistance > 0.0) return SDF + outsideDistance;
+
+    return SDF;
+}
+
+vec4 texture3DSDFUVW(vec3 p, vec3 s, sampler3D handle){
+    vec3 distance = abs(p) - s;
+
+    float outsideDistance = length(max(distance, 0.0));
+
+    // map coords to 3d uv space
+    vec3 uvw = (p / (s* 2.0)) + 0.5;
+
+    float SDF = textureLod(handle, uvw, 0).r;
+    
+    if (outsideDistance > 0.0) return vec4(SDF + outsideDistance, uvw);
+
+    return vec4(SDF, uvw);
+}
+
+vec4 texture3DSDFrgba(vec3 p, vec3 s, sampler3D handle, sampler3D handleALB){
+    vec3 distance = abs(p) - s;
+
+    float outsideDistance = length(max(distance, 0.0));
+
+    // map coords to 3d uv space
+    vec3 uvw = (p / (s* 2.0)) + 0.5;
+
+    vec4 SDF = textureLod(handle, uvw, 0);
+    vec4 albedo = textureLod(handleALB, uvw, 0);
+
+    if (outsideDistance > 0.0) return vec4(SDF.x + outsideDistance, albedo.rgb);
+
+    return SDF;
+}
+
+
+vec3 texture3DSDFUV(vec3 p, vec3 s, sampler3D handle){
+    vec3 distance = abs(p) - s;
+
+    float outsideDistance = length(max(distance, 0.0));
+
+    // map coords to 3d uv space
+    vec3 uvw = (p / (s* 2.0)) + 0.5;
+
+    vec3 SDF = textureLod(handle, uvw, 0).rgb;
+
+    if (outsideDistance > 0.0) return vec3(SDF.r + outsideDistance, SDF.yz);
+
+    return SDF;
+}
+
+vec3 transformP(vec3 p, mat4 matrix){
+    vec4 np = matrix * vec4(p, 1.0);
+    return np.xyz;
+}
+
+float SDFMeshDist(vec3 p, MDF cMDF){
+    vec3 gp = p - cMDF.gPosition.xyz;
+    vec3 fp = transformP(gp, cMDF.globalTransform);
+
+    float nsdfv = texture3DSDF(fp, cMDF.gExtents.rgb, cMDF.SDF_Handle);
+
+    return nsdfv;
+}
+
+vec3 SDFMesh(vec3 p, MDF cMDF){
+    vec3 gp = p - cMDF.gPosition.xyz;
+    vec3 fp = transformP(gp, cMDF.globalTransform);
+
+    vec3 nsdfv = texture3DSDFUV(fp,cMDF.gExtents.rgb, cMDF.SDF_Handle);
+
+    vec2 uv = nsdfv.gb * vec2(cMDF.position.w, cMDF.extents.w);
+
+    return vec3(nsdfv.r, uv);
+}
+
+vec4 SDFMeshRGB(vec3 p, MDF cMDF){
+    vec3 gp = p - cMDF.gPosition.xyz;
+    vec3 fp = transformP(gp, cMDF.globalTransform);
+
+    vec4 nsdfv = texture3DSDFrgba(fp,cMDF.gExtents.rgb, cMDF.SDF_Handle, cMDF.ALB_Handle);
+
+    return vec4(nsdfv);
+}
+vec4 SDFMeshUVW(vec3 p, MDF cMDF){
+    vec3 gp = p - cMDF.gPosition.xyz;
+    vec3 fp = transformP(gp, cMDF.globalTransform);
+
+    vec4 nsdfv = texture3DSDFUVW(fp,cMDF.gExtents.rgb, cMDF.SDF_Handle);
+
+    return vec4(nsdfv);
+}
+
+vec4 scene(vec3 p, float mindist, out int ind){
+    vec4 final = vec4(INF, 0.0, 0.0, 0.0);
+    ind = 0;
+    for (int i = 0; i < MDFS.length(); i++){
+        if (!intersectAABB(MDFS[i].rootPosition.xyz, MDFS[i].rootExtents.xyz,
+                positionScale.xyz, vec3(positionScale.w * 2.0))) continue;
+        //float dist = SDFMeshDist(p, MDFS[i]);
+        //vec3 dist = SDFMesh(p, MDFS[i]);
+        vec4 dist = SDFMeshUVW(p, MDFS[i]);
+        final.x = min(dist.x, final.x);
+        
+        if (final.x == dist.x){
+            //final.y = float(i);
+            //final.zw = dist.yz;
+            
+            final.yzw = dist.yzw;
+            ind = i;
+            //if (dist < mindist) final.z = 1.0;
+        }
+        
+    }
+    
+    return final;
+}
+
+void main() {
+    const ivec3 uvw = ivec3(gl_GlobalInvocationID.xyz);
+
+    if (uvw.x >= volumeSize.x ||
+        uvw.y >= volumeSize.y ||
+        uvw.z >= volumeSize.z) return;
+
+    vec3 normalizedUVW = (vec3(uvw) + vec3(0.5f)) / vec3(volumeSize);
+    //vec3 normalizedUVW = (vec3(uvw) ) / vec3(volumeSize);
+    vec3 localPos = normalizedUVW - vec3(0.5f);
+    vec3 wp = positionScale.xyz + (localPos * vec3(positionScale.w * 2.0));
+
+    //wp *= 0.5;
+    int ind = 0;
+    vec4 duvw = scene(wp, 0.1, ind);
+    vec4 albedo = texture(MDFS[ind].ALB_Handle, duvw.yzw);
+    vec3 EM = texture(MDFS[ind].SDF_Handle, duvw.yzw).yzw;
+    
+    vec4 final = vec4(duvw.r, EM.rgb);
+    // capture distance and store it
+    imageStore(outGDF, uvw, final);
+    imageStore(outALB, uvw, albedo);
+}

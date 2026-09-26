@@ -16,7 +16,6 @@
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
 
-
 class entity
 {
 public:
@@ -24,7 +23,7 @@ public:
 	//structs
 	struct material {
 		Material Material;
-		glm::vec2 uvScale = glm::vec2(1.0f, 1.0f);
+		glm::vec2 uvScale = glm::vec2(1.0f);
 	};
 
 	struct flags {
@@ -42,6 +41,7 @@ public:
 	};
 
 	struct systems {
+		transformation htransform;
 		transformation previousTransformation;
 		transformation transformation;
 		material material;
@@ -60,7 +60,6 @@ public:
 			uint64_t renderID;
 			uint64_t instanceUUID;
 		BillBoard* BillBoard;
-		float smoothnessValue = 0.0f;
 		bool dirtyTransform = false;
 		bool drawInstanced = false;
 	};
@@ -81,8 +80,7 @@ public:
 	};
 	std::string name;
 
-	enum ENT_TYPE_ENUM // i thought this casing style would match the other enums ive seen with the libs i use  
-	{
+	enum ENT_TYPE_ENUM{
 		ENT_MODEL_TYPE	    =  0,
 		ENT_BILLBOARD_TYPE  = 1,
 		ENT_EMPTY_TYPE			=  2

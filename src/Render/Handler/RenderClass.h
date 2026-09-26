@@ -33,12 +33,15 @@ public:
 	static Line3D* line;
 	static Texture* bluenoise;
 	static Texture* bayermatrix;
+	static Texture* caustic;
+	static Texture* ripples;
+	static Texture* droplets;
+	static Texture* puddles;
 	static Texture3D* LUT;
 	static bool doTAA;
+	static float jitterFactor;
 	static bool doBinaryAlpha;
 	static bool animateBinaryAlpha;
-	
-	//TimeUtil::timer ssrTimer;
 	
 	struct transformation {
 		glm::vec3 position = glm::vec3(0.0f);
@@ -51,27 +54,20 @@ public:
 		NONE = 0,
 		DEFERRED = 1,
 		FORWARD = 2,
-		SWRT = 3,
-		SWRT2 = 4
+		SWRT = 3
 	};
 	
 	static renderersEnum currentRenderer;
 	static int currentRendererInd;
 
 	static void init(unsigned int width, unsigned int height);
-
 	static void initGlobalShaders();
-
-	static void ClearFramebuffers();
-
-	static void Render(GLFWwindow* window, unsigned int width, unsigned int height);
-	
-	static void taaPass();
-	
-	static void skyGraidentPass();
-
 	static void Cleanup();
 	
+	static void ClearFramebuffers();
+	static void Render(GLFWwindow* window, unsigned int width, unsigned int height);
+	static void taaPass();
+	static void skyGraidentPass();
 	static void compileShaderUniforms();
 
 };

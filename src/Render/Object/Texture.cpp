@@ -1,9 +1,12 @@
 #include "Texture.h"
 #include <utils/logConsole.h>
 #include "utils/FE_math.h"
+#include <utils/imageResize.h>
 
-void Texture::createFromCapture()
-{
+//#define STB_IMAGE_RESIZE_IMPLEMENTATION
+//#include "stb/stb_image_resize.h"
+
+void Texture::createFromCapture(){
     if (!suppressCreation) return;
     
     suppressCreation = false;
@@ -16,8 +19,7 @@ void Texture::createFromCapture()
     createTexture(path.c_str(), type.c_str(), unit);
 }
 
-void Texture::createColour(glm::vec4 colour, const char* texType, GLuint slot)
-{
+void Texture::createColour(glm::vec4 colour, const char* texType, GLuint slot){
     path = "null";
     //LogConsole::print("Texture loading started");
     // Assigns the type of the texture to the texture object
@@ -26,8 +28,7 @@ void Texture::createColour(glm::vec4 colour, const char* texType, GLuint slot)
     unit = slot;
     //std::cout << type << " U " << slot << std::endl;
 
-    if (suppressCreation)
-    {
+    if (suppressCreation){
         sColour = colour;
         return;
     }
@@ -111,7 +112,15 @@ void Texture::createTexture(const char* image, const char* texType, GLuint slot)
         bytes = fallbackPixel; 
         skipstbi = true;
     }
-
+    
+    
+    // investigate cleaning up and adding proper error handling to this + freeing resources
+    /*
+    int nW = 128; int nH = 128;
+    unsigned char* obytes = (unsigned char*)malloc(nW * nH * numColCh);
+    FlouraImageResize::resize2D(bytes, widthImg, heightImg, numColCh, obytes, nW, nH);
+    bytes = obytes; widthImg = nW; heightImg = nH;
+    */
     GLenum format = GL_RGB;
     if (numColCh == 4)format = GL_RGBA;
     //else if (numColCh == 3) format = GL_RGB;
@@ -157,8 +166,7 @@ void Texture::createTexture(const char* image, const char* texType, GLuint slot)
     created = true;
 }
 
-void Texture::reload(GLuint slot)
-{
+void Texture::reload(GLuint slot){
     // Assigns the texture to a Texture Unit
     glActiveTexture(GL_TEXTURE0 + slot);
     unit = slot;

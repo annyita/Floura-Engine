@@ -5,9 +5,24 @@
 #include <Systems/Physics/Collision.h>
 #include <Render/Buffer/VBO.h>
 
-class BVH
-{
+class accelerate{
 public:
+    
+    // uniform gird
+    static void uniformSplitEmptySpace(std::vector<Collision::AABB>& aabbs, glm::vec3& p, glm::vec3& e, int dimension);
+    
+    struct clipmapLevel{
+        glm::vec4 ps; // pos & scale
+        uint64_t handle;
+        uint64_t handle2;
+        float thickness;
+        uint32_t dirty; // bool but 64 for padding
+        float padding0;
+        float padding1;
+    };
+    
+    static void transformClips(glm::vec3 p, std::vector<clipmapLevel>&clips);
+    
     struct BVH_primitive{
         //GLint i0, i1, i2;
         unsigned int i0, i1, i2;
@@ -40,7 +55,7 @@ public:
     
     static std::vector<leaf> blasGenBVH(std::vector<Vertex> &vertices, std::vector<GLuint> &indices, int minTri, glm::mat4 transformation);
 
-    static int aabbTraverseKDtree(std::vector<Vertex>& vertices, std::vector<BVH::leaf>& leaves, int &fatherLeafIndex, float &minDist, int &minIndex, int &closestPrimIndex, glm::vec3& p, glm::vec3& s);
+    static int aabbTraverseKDtree(std::vector<Vertex>& vertices, std::vector<accelerate::leaf>& leaves, int &fatherLeafIndex, float &minDist, int &minIndex, int &closestPrimIndex, glm::vec3& p, glm::vec3& s);
     
     
     static std::vector<leaf> blasGenKDAccel(std::vector<Vertex> &vertices, std::vector<GLuint> &indices, int minTri, int maxDepth, glm::mat4 transformation);

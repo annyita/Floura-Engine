@@ -7,7 +7,7 @@
 class GeometryPass
 {
 public:
-	static unsigned int depthTexture, gBuffer, gAlbedoSpec, gNormal, gSpecular, gPosition, DBO, gNoise, gVelocity, gEmission;
+	static unsigned int depthTexture, gBuffer, gAlbedo, gNormal, gSpecular, gPosition, DBO, gNoise, gVelocity, gEmission;
 	
 	static void updateGbufferResolution(unsigned int width, unsigned int height);
 

@@ -18,7 +18,7 @@ uniform sampler2D gSpecular;
 uniform sampler2D gVelocity;
 uniform sampler2D gEmission;
 
-uniform sampler2D skyGradientTexture;
+//uniform sampler2D skyGradientTexture;
 
 // history
 uniform sampler2D hColour;
@@ -97,6 +97,7 @@ uniform int lightCount;
 
 uniform bool doSSR;
 uniform bool doContactShadows;
+uniform sampler2D caustic;
 
 float linearizeDepth(float depth, float NP, float FP){
     return (2.0 * NP * FP) / (FP + NP - (depth * 2.0 - 1.0) * (FP - NP));
@@ -176,10 +177,8 @@ float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal, 
         
         vec2 pixelSize = 1.0 / textureSize(shadowMap, 0);
         float tsamples = 0.0;
-        for(int y = -sampleRadius; y <= sampleRadius; y++)
-        {
-            for(int x = -sampleRadius; x <= sampleRadius; x++)
-            {
+        for(int y = -sampleRadius; y <= sampleRadius; y++){
+            for(int x = -sampleRadius; x <= sampleRadius; x++){
                 float angle = texture(bluemap, noiseUV).r * NumberOfSamples;
                 vec2 foffset = vec2(cos(angle), sin(angle));
                 float closestDepth = texture(shadowMap, vec3(lightCoords.xy + (vec2(x, y) * foffset) * pixelSize, currentDepth - bias )).r;
@@ -199,8 +198,7 @@ float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal, 
 #define Scale vec3(.8, .8, .8)
 #define K 19.19
 
-vec3 hash(vec3 a)
-{
+vec3 hash(vec3 a){
     a = fract(a * Scale);
     a += dot(a, a.yxz + K);
     return fract((a.xxy + a.yxx)*a.zyx);
@@ -212,8 +210,7 @@ float hash2(vec2 p) {
     return fract(p.x * p.y);
 }
 
-float shadowTrace(vec3 lightDirection, vec3 normal, vec3 iPosition)
-{
+float shadowTrace(vec3 lightDirection, vec3 normal, vec3 iPosition){
     if (!doContactShadows) return 0.0f;
     vec3 viewPos    = (viewMatrix * vec4(iPosition, 1.0)).xyz;
     vec3 viewNormal = normalize(mat3(viewMatrix) * normal);
@@ -234,11 +231,6 @@ float shadowTrace(vec3 lightDirection, vec3 normal, vec3 iPosition)
     float hit = 0.0;
     
     float shadow = 0.0f;
-    
-    //vec3 wp = vec3(vec4(viewPos, 1.0) * inverseViewMatrix);
-    //vec3 t = vec3(time, time +2, time + 3);
-    //vec3 jitt = mix(vec3(0.0), vec3(hash(wp + t)), 0.1); // time
-    //jitt * time;
     
     //vec4 csCoords = RayCast((vec3(jitt)) + rayDir, rayOrigin, dDepth, 12, hit, 0.05);
     vec4 csCoords = RayCast(rayDir, rayOrigin, dDepth, 64, hit, 0.05);
@@ -597,17 +589,9 @@ vec3 sampleHemisphere(vec3 normal, float random){
 
 
 
-vec4 ssgi(int samples, vec3 ARM){
-    float Metallic = ARM.b;
-    float rough = ARM.g;
-
-    //bool fallback;
-
-    vec3 worldPos   = texture(gPosition, texCoord).xyz;
-    vec3 worldNormal = texture(gNormal, texCoord).xyz;
-
-    vec3 viewPos    = (viewMatrix * vec4(texture(gPosition, texCoord).xyz, 1.0)).xyz;
-    vec3 viewNormal = mat3(viewMatrix) * texture(gNormal, texCoord).xyz;
+vec4 ssgi(int samples, vec3 gp, vec3 nrm, out vec3 emission){
+    vec3 viewPos    = (viewMatrix * vec4(gp, 1.0)).xyz;
+    vec3 viewNormal = mat3(viewMatrix) * nrm;
 
     vec3 V = normalize(viewPos);
     vec3 R = reflect(V, viewNormal);
@@ -615,35 +599,19 @@ vec4 ssgi(int samples, vec3 ARM){
     vec3 hitPos = viewPos;
     float dDepth;
     float hit = 0.0;
-    
-    int lastLOD = textureQueryLevels(hColour) - 1;
-
-    float maxLod = lastLOD;
-
-    float lod =  rough * maxLod;
-
-    lod = min(lod, 10.0);
 
     vec3 indirectColour = vec3(0.0f);
+    vec3 emissionColour = vec3(0.0f);
     
-    float giboost = 1.5;
-    giboost += 1.0;
+    float giboost = 1.0;
+    float emboost = 1.0;
     
     if (samples <= 0) return vec4(indirectColour, 0.0);
-
-    sampler2D bluemap =sampler2D(BlueNoiseHandle) ;
-    vec2 noiseUV = vec2(gl_FragCoord.xy) / vec2(textureSize(bluemap, 0)); // new uvec2
-
-    vec2 scrollingUV = noiseUV + fract(time * vec2(12.9898, 78.233));
-    vec2 blueNoise = texture(bluemap, scrollingUV).rg;
     
     int hitcount = 0;
     
     for (int i = 0; i < samples; i++){
-        float u = fract(blueNoise.r + float(i) * 0.61803398875);
-        float v = fract(blueNoise.g + float(i) * 0.61803398875);
-
-        vec3 randomDir = sampleHemisphere(normalize(R), u + (time * gl_FragCoord.z ) );
+        vec3 randomDir = sampleHemisphere(normalize(R), (time * gl_FragCoord.z + random(gp) ));
         vec3 dir =reflect(V, randomDir);
 
         float hit = 0.0;
@@ -651,13 +619,20 @@ vec4 ssgi(int samples, vec3 ARM){
 
         if (hit == 1.0){
             hitcount++;
-            vec3 SSGI = textureLod(hColour, csCoords.xy, lod).rgb;
-
+            vec3 hitAlbedo = texture(gAlbedoSpec, csCoords.xy).rgb;
+            vec3 hitARM = texture(gSpecular, csCoords.xy).rgb;
+            vec3 hitNRM = texture(gNormal, csCoords.xy).rgb;
+            vec3 hitP = texture(gPosition, csCoords.xy).rgb;
+            vec3 shadow = lights(hitARM, hitNRM, hitP).rgb;
+            vec3 SSGI = hitAlbedo * shadow;
+            vec3 EM = texture(gEmission, csCoords.xy).rgb;
+            
             indirectColour += SSGI* giboost;
+            emissionColour += EM * emboost;
         }
     }
 
-
+    emission = clamp((emissionColour / hitcount), 0.0, 1.0), 1.0;
     return vec4( clamp((indirectColour / hitcount), 0.0, 1.0), 1.0);
 }
 
@@ -770,6 +745,21 @@ vec4 sampleProbeGrid(vec3 p, vec3 vp, vec3 s, vec3 surfaceNrm, sampler3D handle,
     return tp;
 }
 
+vec4 triplanarMap(sampler2D iTexture, vec3 position, vec3 normal, vec2 offset){
+    vec2 uvX = position.zy / vec2(2.0f);
+    vec2 uvY = position.xz / vec2(2.0f);
+    vec2 uvZ = position.xy / vec2(2.0f);
+
+    vec4 tX =texture(iTexture, uvX + offset);
+    vec4 tY =texture(iTexture, uvY + offset);
+    vec4 tZ =texture(iTexture, uvZ + offset);
+
+    vec3 blendedWeights = abs(normal);
+    blendedWeights = pow(blendedWeights, vec3(4.0));
+    blendedWeights /= (blendedWeights.x + blendedWeights.y + blendedWeights.z);
+    return tX * blendedWeights.x + tY * blendedWeights.y + tZ * blendedWeights.z;
+}
+
 void main(){
     vec2 velocity = texture(gVelocity, texCoord).rg;
     //vec2 scaledVelocity = velocity * 1.0;
@@ -818,7 +808,8 @@ void main(){
     //float displacement = texture(gNormal, texCoord).a;
 
     vec3 position = texture(gPosition, texCoord).rgb;
-
+    //float depth2 = linearizeDepth(texture(gPosition, texCoord).a, 0.1, 100.0);
+    //gl_fragdepth
     //FragColor = vec4(position, 1.0); return;
     
     vec3 viewVector = position - camPos;
@@ -828,10 +819,16 @@ void main(){
     //vec3 direct = ARM.r * lights(ARM, normal, position).rgb;
     vec3 shadow =  lights(ARM, normal, position).rgb;
     //vec3 direct = shadow * ARM.r;
+    //float nCaulstic = triplanarMap(caustic, position, normal, vec2(0.0)).r;
+
+
+    //caustic
     vec3 direct = shadow;
+    //direct += nCaulstic;
     
     //vec3 CMGI = indirectIBL(indirectSamples, ARM, normal, viewVector);// [placeholder
-    vec3 ssgi = ssgi(indirectSamples, ARM).rgb;
+    vec3 ssem = vec3(0.0f);
+    vec3 ssgi = ssgi(indirectSamples, position, normal, ssem).rgb;
 
     //vec3 indirect = ssgi * CMGI.rgb;
     vec3 indirect = ssgi;
@@ -880,7 +877,7 @@ void main(){
     //vec3 cubeMapPlusSSR = reflections;
     //vec3 cubeMapPlusSSR = mix(reflections, nssr.rgb, nssr.a);
     
-    vec3 final = albedo.rgb * gi + reflections;
+    vec3 final = albedo.rgb * gi + reflections + ssem;
     //vec3 final = albedo.rgb * gi + reflections + emissionProbe.rgb;
     
 
@@ -893,7 +890,12 @@ void main(){
     //final = vec4(totalDiffuse, 1.0);
 
     FragColour = vec4(final, 1.0f);
-/*
+    //FragColour = vec4(indirect, 1.0f);
+    //FragColour.rgb = normal;
+    //FragColour = vec4(vec3(depth2), 1.0);
+    //FragColour = vec4(vec3(linearizeDepth(depth , 0.1, 100.0)), 1.0);
+    //FragColour = vec4(position, 1.0);
+    /*
     vec3 volumePos = vec3(0.0f);
     vec3 volumeScale = vec3(50.0f);
 

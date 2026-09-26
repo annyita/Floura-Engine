@@ -33,6 +33,7 @@ uniform mat4 invProjectionMatrix;
 
 uniform mat4 invHViewMatrix;
 uniform mat4 invHProjectionMatrix;
+uniform mat4 invCameraMatrix;
 
 uniform vec3 cameraPosition;
 
@@ -93,70 +94,94 @@ struct MDF{
     vec4 rootExtents;
     vec4 gPosition;
     vec4 gExtents;
-    //vec4 gRotation;
     mat4 globalTransform;
     
     uint64_t instanceUUID;
     sampler3D SDF_Handle;
-    
-    sampler2D texture_diffuse_Handle;
-    sampler2D texture_roughness_Handle;
-    sampler2D texture_normal_Handle;
-    sampler2D texture_emission_Handle;
-    
+    sampler3D ALB_Handle;
+    uint64_t padding;
 };
+
+struct clipmapLevel{
+    vec4 ps; // pos & scale
+    uint64_t handle;
+    uint64_t handle2;
+    float thickness;
+    uint dirty; // bool but 64 for padding
+    float padding0;
+    float padding1;
+};
+
 // mesh distance fields
 layout(std430, binding = 11) buffer MDF_Buffer {
     MDF MDFS[];
 };
+layout(std430, binding = 12) buffer GDF_Buffer {
+    clipmapLevel GDFS[];
+};
 
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898, 78.233))) * 43758.5453);
-}
+#define accelMode 1 // 0 = mdf, 1 = gdf
+#define forceMirror 0// 0 = false, 1 = true, 2 = true + unaltered metallic
+#define drawSDFSCENE 0
+#define cascadeShape 0 // 0 = box, 1 = sphere
 
-float r_maxdist = 64.0f;
-float r_shadow_ambient = 0.0f; //0.07f;
-float r_roughnessFloor = 0.0f;
-int r_steps = 80;
-int r_bounces = 1;
-int r_samples  = 0;
-int r_minLodLevel = 1;
-float r_noiseThreshold = 1.0;
-bool forceMirror = false;
+#define r_steps 128
+#define i_steps 128
+#define r_maxdist 320f
+#define i_maxdist 32.0f
 
-float i_maxdist = 64.0f;
-int i_steps = 80;
-int i_samples = 1;  
-int i_minLodLevel = 8;
-int e_minLodLevel = 8;
-float i_noiseThreshold  = 1.0;
-float i_indirectBoost = 2.0f; // default at 1.0
-float e_emissionBoost = 1.0f; // default at 1.0
 
-bool drawSDFSCENE = false;
+#define  i_samples 1
+#define doReflection 1
+#define indirectMetallicMode 1 // 0 = false, 1 = true 
+#define e_mip 0
 
-int maxlodLevel = 2; // off
-float transitionRangeLOD = 30.0f;
+#define r_roughnessFloorEnabled 0
+#define r_roughnessFloor 0.3f
+float r_shadow_ambient = 0.03f; //0.07f;
+float r_taBlendTreshhold = 0.0f;
+float r_taBlendUnderTresh = 0.5f;
+
+//float r_noiseThreshold = 1.0;
+//float i_noiseThreshold  = 1.0;
+float i_indirectBoost = 5.0f; // default at 1.0
+float e_emissionBoost = 5.0f; // default at 1.0
+
 float maxSDFDist = 64.0f;
 
 const float eps = 0.01f;
 float mindist = 0.01f;
-float originEplison = 0.5f;
+//float originEplison = 0.2f;
+
+// good for gdf
+//const float eps = 0.05f;
+//float mindist = 0.05f;
+float originEplison = 0.5;
+float minIntersectionDist = 0.1;
+//const float eps = 0.01f;
+//float mindist = 0.01f;
+//float originEplison = 0.90f;
+//#define r_bounces 1
 
 struct hitresult{
     vec3 normal;
     vec3 hitpos;
-    vec2 uv;
-    //float totalDistanceTravelled;
+    vec3 uvw;
+    //vec2 uv;
     float distance;
-    float maxDist;
     float iterationsDBG;
-    //float lowestDistance;
-    int materialIndex;
+    int hitIndex;
+    int cascade;
     bool isHit;
+    //float totalDistanceTravelled;    
+    //float maxDist;
+    //float lowestDistance;
 };
 
 
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898, 78.233))) * 43758.5453);
+}
 
 uvec3 murmurHash31(uint src) {
     const uint M = 0x5bd1e995u;
@@ -173,6 +198,21 @@ vec3 hash31(float src) {
     return uintBitsToFloat(h & 0x007fffffu | 0x3f800000u) - 1.0;
 }
 
+uint murmurHash13(uvec3 src) {
+    const uint M = 0x5bd1e995u;
+    uint h = 1190494759u;
+    src *= M; src ^= src>>24u; src *= M;
+    h *= M; h ^= src.x; h *= M; h ^= src.y; h *= M; h ^= src.z;
+    h ^= h>>13u; h *= M; h ^= h>>15u;
+    return h;
+}
+
+// 1 output, 3 inputs
+float hash13(vec3 src) {
+    uint h = murmurHash13(floatBitsToUint(src));
+    return uintBitsToFloat(h & 0x007fffffu | 0x3f800000u) - 1.0;
+}
+
 float lumaFromRGB(vec3 rgb){
     vec3 weights = vec3(0.2126, 0.7152, 0.0722);
     float luminance = dot(rgb, weights);
@@ -184,9 +224,16 @@ float sdBox(vec3 p, vec3 b){
     return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0f);
 }
 
-float fOpUnionID(float res1, float res2){
-    return (res1 < res2) ? res1 : res2;
+float sdCapsule( vec3 p, vec3 a, vec3 b, float r ){
+    vec3 pa = p - a, ba = b - a;
+    float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+    return length( pa - ba*h ) - r;
 }
+
+float sdSphere( vec3 p, float r ){
+    return length(p) - r;
+}
+
 vec4 fOpUnionID4(vec4 res1, vec4 res2){
     return (res1.x < res2.x) ? res1 : res2;
 }
@@ -196,7 +243,7 @@ vec3 transformP(vec3 p, mat4 matrix){
     return np.xyz;
 }
 
-float texture3DSDF(vec3 p, vec3 s, sampler3D handle, int lodLevel){
+float texture3DSDF(vec3 p, vec3 s, sampler3D handle){
     vec3 distance = abs(p) - s;
     
    float outsideDistance = length(max(distance, 0.0));
@@ -204,14 +251,14 @@ float texture3DSDF(vec3 p, vec3 s, sampler3D handle, int lodLevel){
     // map coords to 3d uv space
     vec3 uvw = (p / (s* 2.0)) + 0.5;
     
-    float SDF = textureLod(handle, uvw, lodLevel).r;
+    float SDF = textureLod(handle, uvw, 0).r;
     
     if (outsideDistance > 0.0) return SDF + outsideDistance;
     
     return SDF;
 }
 
-vec3 texture3DSDFUV(vec3 p, vec3 s, sampler3D handle, int lodLevel){
+vec3 texture3DSDFUV(vec3 p, vec3 s, sampler3D handle){
     vec3 distance = abs(p) - s;
 
     float outsideDistance = length(max(distance, 0.0));
@@ -219,7 +266,7 @@ vec3 texture3DSDFUV(vec3 p, vec3 s, sampler3D handle, int lodLevel){
     // map coords to 3d uv space
     vec3 uvw = (p / (s* 2.0)) + 0.5;
 
-    vec3 SDF = textureLod(handle, uvw, lodLevel).rgb;
+    vec3 SDF = textureLod(handle, uvw, 0).rgb;
 
     if (outsideDistance > 0.0) return vec3(SDF.r + outsideDistance, SDF.yz);
 
@@ -230,96 +277,46 @@ vec3 nearestPointOnAABB(vec3 p, vec3 pos, const vec3 extents){
     return clamp(p, pos - extents, pos + extents);
 }
 
-int calculateLODLevel(vec3 vPosition, vec3 cameraPosition, float transitionDistance, int maxLOD){
-    float distance = distance(vPosition, cameraPosition);
-    int targetLOD = int(distance / transitionDistance);
-    targetLOD = min(targetLOD, maxLOD);
-
-    return targetLOD;
-}
-
-vec3 SDFMesh(vec3 p, MDF cMDF, int lodLevel){
+vec3 SDFMesh(vec3 p, MDF cMDF){
     vec3 gp = p - cMDF.gPosition.xyz;
     vec3 fp = transformP(gp, cMDF.globalTransform);
     
-    vec3 nsdfv = texture3DSDFUV(fp,cMDF.gExtents.rgb, cMDF.SDF_Handle, lodLevel);
+    vec3 nsdfv = texture3DSDFUV(fp,cMDF.gExtents.rgb, cMDF.SDF_Handle);
     
     vec2 uv = nsdfv.gb * vec2(cMDF.position.w, cMDF.extents.w);
     
     return vec3(nsdfv.r, uv);
 }
 
-float SDFMeshDist(vec3 p, MDF cMDF, int lodLevel){
+float SDFMeshDist(vec3 p, MDF cMDF){
     vec3 gp = p - cMDF.gPosition.xyz;
     vec3 fp = transformP(gp, cMDF.globalTransform);
     
-    float nsdfv = texture3DSDFUV(fp, cMDF.gExtents.rgb, cMDF.SDF_Handle, lodLevel).r;
+    float nsdfv = texture3DSDF(fp, cMDF.gExtents.rgb, cMDF.SDF_Handle);
 
     return nsdfv;
 }
 
-// moved up here since its in the way
-hitresult aabbVsRay(vec3 ro, vec3 rd, vec3 p, vec3 s){
-    hitresult hr; hr.isHit = false; hr.distance = INF;
-    vec3 Min = p - s;
-    vec3 Max = p + s;
-
-    vec3 invRD = 1.0f / rd;
-
-    vec3 t0 = (Min - ro) * invRD;
-    vec3 t1 = (Max - ro) * invRD;
-
-    vec3 tMin = min(t0, t1);
-    vec3 tMax = max(t0, t1);
-
-    float tNear = max(max(tMin.x, tMin.y), tMin.z);
-    float tFar = min(min(tMax.x, tMax.y), tMax.z);
-
-    if (tNear > tFar || tFar < 0) { return hr; }
-
-    hr.isHit = true;
-    hr.distance = tNear;
-    hr.maxDist = tFar;
-    return hr;
-}
-
-vec2 sceneSDFUVIndex(vec3 p, int i){ // scene
-    vec3 tsdf = vec3(INF, 0.0, 0.0);
-    MDF cMDF = MDFS[i];
+vec2 sceneSDFUVIndex(vec3 p, int i, MDF cMDF, vec3 np){ // scene
+    vec3 rp = cMDF.rootPosition.xyz;
+    vec3 re = cMDF.rootExtents.xyz;
     
-        vec3 np = nearestPointOnAABB(cameraPosition, cMDF.rootPosition.xyz, cMDF.rootExtents.xyz);
-
-        if (distance(np, cameraPosition) > maxSDFDist) return vec2(0.0, 0.0);
-
-        float root = sdBox(p - cMDF.rootPosition.xyz, cMDF.rootExtents.xyz);
-        if (root < tsdf.x){
-
-            int lodLevel = calculateLODLevel(np, cameraPosition, transitionRangeLOD, maxlodLevel);
-            tsdf.rgb = SDFMesh(p, cMDF, lodLevel);
-        }
+    //float root = sdBox(p - rp, re);
+    vec3 tsdf = SDFMesh(p, cMDF);
     return vec2(tsdf.gb);
 }
 
-float sceneSDFdistIndex(vec3 p, int i){ // scene
-    float tsdf = INF;
-    
-    MDF cMDF = MDFS[i];
-    
-        vec3 np = nearestPointOnAABB(cameraPosition, cMDF.rootPosition.xyz, cMDF.rootExtents.xyz);
+float sceneSDFdistIndex(vec3 p, int i, MDF cMDF, vec3 np){ // scene
+    vec3 rp = cMDF.rootPosition.xyz;
+    vec3 re = cMDF.rootExtents.xyz;
 
-        if (distance(np, cameraPosition) > maxSDFDist) return INF;
-
-        float root = sdBox(p - cMDF.rootPosition.xyz, cMDF.rootExtents.xyz);
-        if (root < tsdf){
-
-            int lodLevel = calculateLODLevel(np, cameraPosition, transitionRangeLOD, maxlodLevel);
-            tsdf = SDFMeshDist(p, cMDF, lodLevel);
-        }
-    return tsdf;
+    //float root = sdBox(p - rp, re);
+    //return abs(SDFMeshDist(p, cMDF, lodLevel));
+    return SDFMeshDist(p, cMDF);
 }
 
 
-vec4 sceneSDF(vec3 p, int mdfLength ){ // scene
+vec4 sceneSDF(vec3 p, int mdfLength  ){ // scene
     vec4 tsdf = vec4(INF, 0.0, 0.0, 0.0);
 
     //aabbHitDBGmode
@@ -328,16 +325,16 @@ vec4 sceneSDF(vec3 p, int mdfLength ){ // scene
     
     for (int i = 0; i < mdfLength; i++ ){
         MDF cMDF = MDFS[i];
+        vec3 rp = cMDF.rootPosition.xyz;
+        vec3 re = cMDF.rootExtents.xyz;
         
-        vec3 np = nearestPointOnAABB(cameraPosition, cMDF.rootPosition.xyz, cMDF.rootExtents.xyz);
+        vec3 np = nearestPointOnAABB(cameraPosition, rp, re);
         
         if (distance(np, cameraPosition) > maxSDFDist) continue;
         
-        float root = sdBox(p - cMDF.rootPosition.xyz, cMDF.rootExtents.xyz);
+        float root = sdBox(p - rp, re);
         if (root < tsdf.x){
-            
-            int lodLevel = calculateLODLevel(np, cameraPosition, transitionRangeLOD, maxlodLevel);
-            vec4 sdfm = vec4(SDFMesh(p, cMDF, lodLevel), float(i));
+            vec4 sdfm = vec4(SDFMesh(p, cMDF), float(i));
             //vec4 sdfm = vec4(root, 0.0, 0.0, 0.0);
             
             if (i == 0) {
@@ -357,26 +354,78 @@ float sceneSDFdist(vec3 p , int mdfLength){ // scene
     
     for (int i = 0; i < mdfLength; i++ ){
         MDF cMDF = MDFS[i];
+        vec3 rp = cMDF.rootPosition.xyz;
+        vec3 re = cMDF.rootExtents.xyz;
         
-        vec3 np = nearestPointOnAABB(cameraPosition, cMDF.rootPosition.xyz, cMDF.rootExtents.xyz);
+        vec3 np = nearestPointOnAABB(cameraPosition, rp, re);
 
         if (distance(np, cameraPosition) > maxSDFDist) continue;
 
-        float root = sdBox(p - cMDF.rootPosition.xyz, cMDF.rootExtents.xyz);
+        float root = sdBox(p - rp, re);
         if (root < tsdf){
-
-            int lodLevel = calculateLODLevel(np, cameraPosition, transitionRangeLOD, maxlodLevel);
-            float sdfm = SDFMeshDist(p, cMDF, lodLevel);
-
-            if (i == 0) {
-                tsdf = sdfm;
-                continue;
-            }
-            tsdf = fOpUnionID(tsdf,sdfm); //fOpUnionRoundID4 fOpUnionID4
+            float sdfm = SDFMeshDist(p, cMDF);
+            
+            tsdf = min(tsdf,sdfm); //fOpUnionRoundID4 fOpUnionID4
 
         }
     }
     return tsdf;
+}
+
+vec4 gdfScene(vec3 p, out float nThickness, out int cascade){
+    float nBD = INF;
+    nThickness = 0.0;
+    cascade = -1;
+    //return vec4(INF, 0.0, 0.0, 0.0);
+    //for (int i = 0; i < 1; i++ ){
+    for (int i = 0; i < GDFS.length(); i++ ){
+        vec3 pos = GDFS[i].ps.xyz;
+        vec3 scale = vec3(GDFS[i].ps.w);
+        vec3 gp = p - pos;
+        
+        #if cascadeShape == 0
+        float bd = sdBox(gp, scale);
+        #elif cascadeShape == 1
+        float bd = sdSphere(gp, scale.r);
+        #endif
+        if (bd > 0.0 || bd > -1.0 && bd < 0.0 && rand(texCoord + vec2(i) + time) < (bd + 1.0)){
+        //if (bd > 0.0){
+           nBD = min(nBD, bd);
+            continue;
+        }
+        //if (rand(texCoord) < bd) continue;
+        
+        nThickness = GDFS[i].thickness;
+        cascade = i;
+        
+        vec3 distance = abs(gp) - scale;
+
+        float outsideDistance = length(max(distance, 0.0));
+
+        // map coords to 3d uv space
+        vec3 uvw = (gp / (scale* 2.0)) + 0.5;
+        
+        float SDF = textureLod(sampler3D(GDFS[i].handle), uvw, 0).r;
+        //float spheredist = sdCapsule(p - cameraPosition, vec3(0.0, 0.5, 0.0), vec3(0.0, -1.3, 0.0), 0.5);
+        //SDF = fOpUnionID4(SDF, vec4(spheredist, vec3(1.0)));
+        //SDF.y = texelFetch(sampler3D(GDFS[i].handle), ivec3(uvw), 0).y;
+        //
+        //float ID = texelFetch(sampler3D(GDFS[i].handle), ivec3(uvw), 0).g;
+        //vec2 SDF = vec2(dist, ID);
+        if (outsideDistance > 0.0) return vec4(SDF + outsideDistance, uvw);
+
+        return vec4(SDF, uvw);
+    }
+    
+    return vec4(INF, 0.0, 0.0, 0.0);
+}
+
+vec3 CalculateNormalGDF( in vec3 p ){
+    const vec2 h = vec2(eps,0);
+    float t = 0.0; int ind = 0; 
+    return normalize( vec3(gdfScene(p+h.xyy, t, ind).x - gdfScene(p-h.xyy, t, ind).x,
+            gdfScene(p+h.yxy, t, ind).x - gdfScene(p-h.yxy, t, ind).x,
+            gdfScene(p+h.yyx, t, ind).x - gdfScene(p-h.yyx, t, ind).x ) );
 }
 
 vec3 CalculateNormal( in vec3 p, int mdfLength ){
@@ -386,20 +435,12 @@ vec3 CalculateNormal( in vec3 p, int mdfLength ){
             sceneSDFdist(p+h.yyx, mdfLength) - sceneSDFdist(p-h.yyx, mdfLength) ) );
 }
 
-vec3 CalculateNormalInd( in vec3 p, int index){
+vec3 CalculateNormalInd( in vec3 p, int index, MDF cMDF, vec3 np){
     const vec2 h = vec2(eps,0);
-    return normalize( vec3(sceneSDFdistIndex(p+h.xyy, index) - sceneSDFdistIndex(p-h.xyy, index),
-            sceneSDFdistIndex(p+h.yxy, index) - sceneSDFdistIndex(p-h.yxy, index),
-            sceneSDFdistIndex(p+h.yyx, index) - sceneSDFdistIndex(p-h.yyx, index) ) );
+    return normalize( vec3(sceneSDFdistIndex(p+h.xyy, index, cMDF, np) - sceneSDFdistIndex(p-h.xyy, index, cMDF, np),
+            sceneSDFdistIndex(p+h.yxy, index, cMDF, np) - sceneSDFdistIndex(p-h.yxy, index, cMDF, np),
+            sceneSDFdistIndex(p+h.yyx, index, cMDF, np) - sceneSDFdistIndex(p-h.yyx, index, cMDF, np) ) );
 }
-
-vec3 CalculateNormalIndMinus( in vec3 p, int index){
-    const vec2 h = vec2(eps,0);
-    return normalize( vec3(-sceneSDFdistIndex(p+h.xyy, index) - -sceneSDFdistIndex(p-h.xyy, index),
-            -sceneSDFdistIndex(p+h.yxy, index) - -sceneSDFdistIndex(p-h.yxy, index),
-            -sceneSDFdistIndex(p+h.yyx, index) - -sceneSDFdistIndex(p-h.yyx, index) ) );
-}
-
 
 hitresult RayAcceleratedSphereMarchScene(vec3 ro, vec3 rd, float maxdist, float mindist, int steps, int index){
     hitresult hr;
@@ -407,21 +448,28 @@ hitresult RayAcceleratedSphereMarchScene(vec3 ro, vec3 rd, float maxdist, float 
     hr.distance = INF;
     //hr.lowestDistance = INF;
     float t = 0.0; // total distance travelled
+    MDF cMDF = MDFS[index];
+    vec3 rp = cMDF.rootPosition.xyz;
+    vec3 re = cMDF.rootExtents.xyz;
+    vec3 np = nearestPointOnAABB(cameraPosition, rp, re);
+    if (distance(np, cameraPosition) > maxSDFDist) return hr;
+    
     // raymarching
     for (int i = 0; i < steps; i++){
         vec3 pos = ro + rd* t;// position along the ray
         
-        float dist = sceneSDFdistIndex(pos, index);
+        float dist = sceneSDFdistIndex(pos, index, cMDF, np);
+        //float dist = abs(sceneSDFdistIndex(pos, index, cMDF, np, lodLevel));
         
         //if (hr.lowestDistance > dist) hr.lowestDistance = dist;
 
         if (dist < mindist){ // treat as if hit
-            hr.uv = sceneSDFUVIndex(pos, index);
+            //hr.uv = sceneSDFUVIndex(pos, index, cMDF, np);
             hr.isHit = true;
             hr.distance = dist;
             //hr.totalDistanceTravelled = t;
-            hr.normal = CalculateNormalInd(pos, index);
-            hr.materialIndex = index;
+            hr.normal = CalculateNormalInd(pos, index, cMDF, np);
+            hr.hitIndex = index;
             hr.hitpos = pos;
             hr.iterationsDBG = float(i) / float(steps);
             break;// how small dist (radius around march)
@@ -437,35 +485,38 @@ hitresult RayAcceleratedSphereMarchScene(vec3 ro, vec3 rd, float maxdist, float 
     return hr;
 }
 
-hitresult invertedSphereMarchSceneIndex(vec3 ro, vec3 rd, float maxdist, float mindist, int steps, int index){
+hitresult raymarchGDFscene(vec3 ro, vec3 rd, float maxdist, float mindist, int steps){
     hitresult hr;
     hr.isHit = false;
-    hr.distance = INF;
     //hr.lowestDistance = INF;
     float t = 0.0; // total distance travelled
     // raymarching
     for (int i = 0; i < steps; i++){
         vec3 pos = ro + rd* t;// position along the ray
 
-        float dist = -sceneSDFdistIndex(pos, index);
+        float nThickness = 0.0; int intd = 0;
+        float dist = gdfScene(pos, nThickness, intd).r;
 
+        t += dist;
         //if (hr.lowestDistance > dist) hr.lowestDistance = dist;
 
-        if (dist < mindist){ // treat as if hit
-            hr.uv = -sceneSDFUVIndex(pos, index);
+        if (dist < (mindist + nThickness)){ // treat as if hit
+             vec4 m = gdfScene(pos, nThickness, intd);
+            hr.uvw = m.yzw;
+            // before this completes do an alpha check
+            //hr.colour = textureLod(sampler3D(GDFS[hr.cascade].handle2), hr.uvw, 0);
+            
+            //hr.colour = m.yzw;
+            hr.cascade = intd;
             hr.isHit = true;
             hr.distance = dist;
-            //hr.totalDistanceTravelled = t;
-            hr.normal = CalculateNormalIndMinus(pos, index);
-            hr.materialIndex = index;
-            hr.hitpos = pos;
             hr.iterationsDBG = float(i) / float(steps);
+            hr.normal = CalculateNormalGDF(pos); // really expensive
+            hr.hitpos = pos;
+            //if (hr.colour.a < 0.5) continue;
             break;// how small dist (radius around march)
         }
-        t += dist;
-
-        if (t > maxdist)break;
-        // failed to hit
+        if (dist > maxdist) break; // failed to hit
         //discard; // discard on far for transparency
         // how large dist (radius around march)
     }
@@ -473,37 +524,43 @@ hitresult invertedSphereMarchSceneIndex(vec3 ro, vec3 rd, float maxdist, float m
     return hr;
 }
 
+hitresult raymarchGDFinverseScene(vec3 ro, vec3 rd, float maxdist, float mindist, int steps){
+    hitresult hr;
+    hr.isHit = false;
+    //hr.lowestDistance = INF;
+    float t = 0.0; // total distance travelled
+    // raymarching
+    for (int i = 0; i < steps; i++){
+        vec3 pos = ro + rd* t;// position along the ray
 
-hitresult raytraceRootHitST(vec3 ro, vec3 rd, float maxdist, float mindist, int steps, int mdfLength){
-    hitresult hr; hr.isHit = false; hr.distance = INF;
-    //return raymarchScene(ro, rd, maxdist, mindist, steps);
+        float nThickness = 0.0; int intd = 0;
+        float dist = -gdfScene(pos, nThickness, intd).r;
 
-    for (int i = 0; i < mdfLength; i++ ){
-        MDF cMDF = MDFS[i];
-    
-        hitresult aabbHR = aabbVsRay(ro, rd, cMDF.rootPosition.xyz, cMDF.rootExtents.xyz);
+        t += dist;
+        //if (hr.lowestDistance > dist) hr.lowestDistance = dist;
 
-        if (!aabbHR.isHit) continue;
-        float sd = max(0.0, aabbHR.distance);
-        if (sd >= hr.distance)  continue;
-        
-        float elipson = (sd + 0.001f);
-        vec3 pokePoint = ro + rd * elipson;
-        
-        float lMaxDist = min(maxdist - elipson, hr.distance - elipson);
-        if (lMaxDist <= 0.0) continue; 
-        
-        hitresult rmHR = RayAcceleratedSphereMarchScene(pokePoint, rd, lMaxDist, mindist, steps, i);
-        
-        if (rmHR.isHit){
-            float tHitDist = elipson + rmHR.distance;
-            if (tHitDist < hr.distance) {
-                hr = rmHR;
-                hr.distance =tHitDist;
-                hr.hitpos = ro + rd * tHitDist;
-            }
+        if (dist < (mindist + nThickness)){ // treat as if hit
+            //vec4 m = -gdfScene(pos, nThickness, intd);
+            hr.distance = -gdfScene(pos, nThickness, intd).r;
+            //hr.uvw = m.yzw;
+            // before this completes do an alpha check
+            //hr.colour = textureLod(sampler3D(GDFS[hr.cascade].handle2), hr.uvw, 0);
+
+            //hr.colour = m.yzw;
+            //hr.cascade = intd;
+            hr.isHit = true;
+            //hr.distance = dist;
+            //hr.iterationsDBG = float(i) / float(steps);
+            //hr.normal = -CalculateNormalGDF(pos); // really expensive
+            hr.hitpos = pos;
+            //if (hr.colour.a < 0.5) continue;
+            break;// how small dist (radius around march)
         }
+        if (dist > maxdist) break; // failed to hit
+        //discard; // discard on far for transparency
+        // how large dist (radius around march)
     }
+
     return hr;
 }
 
@@ -523,14 +580,14 @@ hitresult raymarchScene(vec3 ro, vec3 rd, float maxdist, float mindist, int step
         
         if (dist < mindist){ // treat as if hit
             vec4 m = sceneSDF(pos, mdfLength);
+            hr.uvw = m.yzw;
             hr.isHit = true;
             hr.distance = dist;
             //hr.totalDistanceTravelled = t;
             hr.normal = CalculateNormal(pos, mdfLength);
-            hr.materialIndex = int(m.w);
-
+            hr.hitIndex = int(m.w);
             hr.hitpos = pos;
-            hr.uv = m.yz;
+            //hr.uv = m.yz;
             
             break;// how small dist (radius around march)
         }
@@ -572,7 +629,6 @@ float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal, 
                 //if (currentDepth > closestDepth + bias)
                 shadow += (1.0f - closestDepth);
                 tsamples += 1.0f;
-
             }
         }
 
@@ -727,93 +783,9 @@ vec4 lights(vec3 ARM, vec3 iNormal, vec3 iPosition){
     return colour;
 }
 
-//https://www.shadertoy.com/view/ttc3zr thank you for the hash function
-uvec3 murmurHash33(uvec3 src) {
-    const uint M = 0x5bd1e995u;
-    uvec3 h = uvec3(1190494759u, 2147483647u, 3559788179u);
-    src *= M; src ^= src>>24u; src *= M;
-    h *= M; h ^= src.x; h *= M; h ^= src.y; h *= M; h ^= src.z;
-    h ^= h>>13u; h *= M; h ^= h>>15u;
-    return h;
-}
-
-// 3 outputs, 3 inputs
-vec3 hash33(vec3 src) {
-    uvec3 h = murmurHash33(floatBitsToUint(src));
-    return uintBitsToFloat(h & 0x007fffffu | 0x3f800000u) - 1.0;
-}
-
-vec3 fresnelSchlick(float cosTheta, vec3 F0) { return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0); }
-
-vec3 reflection(vec3 pArm, vec3 pNrm, vec3 ro, vec3 rd, float maxdist, float mindist, int steps, int bounces, int refSteps,
-        highp vec2 velocity, out vec3 specEmission, int mdfLength){
-    vec3 colour = vec3(0.0); int hitcount = 0;
-    
-    vec3 oEM = vec3(0.0f);
-    
-    for (int x = 0; x < refSteps; x++){
-        vec3 lastorigin = ro;
-        vec3 lastdir = rd;
-        
-        float rough = pArm.g;
-        float met = pArm.b;
-        vec3 lColour = texture(gAlbedoSpec, texCoord.xy).rgb;
-        
-        float dim = 1.0f;
-        
-        for (int i = 0; i < bounces; i++){
-            if (dim <= 0.0f) break;
-            hitcount++;
-
-            vec3 t = vec3(time, time +1.0 + float(x), time +3.0 + float( x + i));
-            vec3 jitt = mix(vec3(0.0), vec3(hash33(lastorigin + t)), rough);
-            vec3 incidentDir = normalize(lastdir + jitt);
-
-            hitresult hr = raytraceRootHitST(lastorigin, incidentDir, maxdist, mindist, steps, mdfLength);
-            
-            if (hr.isHit){
-                MDF cMDF = MDFS[hr.materialIndex];
-                vec3 ncolour = textureLod(cMDF.texture_diffuse_Handle, hr.uv, r_minLodLevel).rgb;
-                vec3 arm =  textureLod( cMDF.texture_roughness_Handle, hr.uv, r_minLodLevel).rgb;
-                arm.g = max(r_roughnessFloor, arm.g);
-                
-                oEM += textureLod(cMDF.texture_emission_Handle, hr.uv, r_minLodLevel).rgb;
-                
-                if (!forceMirror){ // the parent material will be the mirror so this does
-                    rough = arm.g;
-                    met = arm.b;
-                }
-                
-                vec3 shadow = lights(vec3(1.0, rough, met), hr.normal, hr.hitpos).rgb;
-                shadow = clamp(shadow + directAmbient + r_shadow_ambient, 0.0, 1.0);
-
-                vec3 F0 = mix(vec3(0.04), ncolour, met);
-                vec3 Fresnel = fresnelSchlick(max(dot(hr.normal, -incidentDir), 0.0), F0);
-                    
-                colour += (ncolour * shadow) * Fresnel * dim;;
-                dim *=  0.5f;
-
-                // this helps with self intersection because apparently we are getting that
-                vec3 origin = hr.hitpos + hr.normal * originEplison;
-                lastorigin = origin;
-                lastdir = reflect(lastdir, hr.normal); // probably looks very off cause the normal is smooth
-            }
-            else {
-                vec3 sky = texture(cmMainHandle, incidentDir).rgb;
-                colour += (sky* dim);
-                //colour += sky * dim; 
-                break;  
-            }
-        }
-    }
-    specEmission = oEM /  clamp(hitcount, 1.0f, hitcount);
-    
-    return colour/ clamp(hitcount, 1.0f, hitcount);
-}
-
-vec3 sampleHemisphere(vec3 normal, int index){
-    float u = rand(texCoord + rand(vec2(time, float(index) ) ) );
-    float v = rand(vec2(u, rand( vec2(time, float(index) ) ) ) );
+vec3 sampleHemisphere(vec3 normal, float value){
+    float u = rand(texCoord + rand(vec2(time, value) ) );
+    float v = rand(vec2(u, rand( vec2(time, value) ) ) );
 
     float phi = 2.0 * 3.14159265 * u;
     float cosTheta = sqrt(1.0 - v);
@@ -826,6 +798,84 @@ vec3 sampleHemisphere(vec3 normal, int index){
     vec3 bitangent = cross(normal, tangent);
 
     return tangent * localDir.x + bitangent * localDir.y + normal * localDir.z;
+}
+
+vec3 fresnelSchlick(float cosTheta, vec3 F0) { return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0); }
+
+vec3 reflection(vec3 pArm, vec3 pNrm, vec3 ro, vec3 rd, float maxdist, float mindist, int steps, highp vec2 velocity, out vec3 specEmission, int mdfLength){
+    vec3 colour = vec3(0.0); int hitcount = 0;
+    
+    vec3 oEM = vec3(0.0f);
+    
+    vec3 lastorigin = ro;
+    vec3 lastdir = rd;
+        
+    float rough = pArm.g;
+    float met = pArm.b;
+    //vec3 lColour = texture(gAlbedoSpec, texCoord.xy).rgb;
+        
+    vec3 dim = vec3(1.0f);
+        
+    //for (int i = 0; i < bounces; i++){
+    //if (dot(dim, vec3(0.333)) <= 0.001f) break;
+    hitcount++;
+            
+    //vec3 indDir = sampleHemisphere(lastdir, float( i) + time);
+    vec3 indDir = sampleHemisphere(lastdir, time);    
+    vec3 incidentDir = normalize(mix(lastdir, indDir, rough * rough));
+    //vec3 jitt = mix(vec3(0.0), indDir, rough);
+    //vec3 incidentDir = normalize(lastdir + jitt);
+    #if accelMode == 0 // MDF
+        hitresult hr = raymarchScene(lastorigin, incidentDir, maxdist, mindist, steps, mdfLength);
+    #elif accelMode == 1 // GDF
+        hitresult hr = raymarchGDFscene(lastorigin, incidentDir, maxdist, mindist, steps);
+    #endif
+    //
+    //CDFtrace
+    if (hr.isHit){
+        MDF cMDF = MDFS[hr.hitIndex];
+        //vec3 albedo = textureLod(cMDF.texture_diffuse_Handle, hr.uv, r_minLodLevel).rgb;
+        //vec3 arm =  textureLod( cMDF.texture_roughness_Handle, hr.uv, r_minLodLevel).rgb;
+        vec3 albedo = textureLod(sampler3D(GDFS[hr.cascade].handle2), hr.uvw, 0).rgb;
+        //vec3 arm =  vec3(1.0, 1.0, 0.0);
+        //arm.g = max(r_roughnessFloor, arm.g);
+        
+        #if forceMirror == 1 // the parent material will be the mirror so this does
+        rough = 0.0;
+            met = 1.0;
+        #elif forceMirror == 2
+            rough = 0.0;
+        #endif
+
+
+        //oEM += textureLod(cMDF.texture_emission_Handle, hr.uv, r_minLodLevel).rgb * dim;
+        oEM += textureLod(sampler3D(GDFS[hr.cascade].handle), hr.uvw, 0).yzw;
+        
+        vec3 shadow = lights(vec3(1.0, rough, met), hr.normal, hr.hitpos).rgb;
+        shadow = clamp(shadow + directAmbient + r_shadow_ambient, 0.0, 1.0);
+         vec3 F0 = mix(vec3(0.04), albedo, met);
+        vec3 Fresnel = fresnelSchlick(max(dot(hr.normal, -incidentDir), 0.0), F0);
+                    
+        vec3 kD = (vec3(1.0) - Fresnel * (1.0 - met));
+        vec3 lighting = (kD * albedo * shadow);
+                
+        colour += lighting * dim;;
+                
+        dim *= Fresnel * 0.5f;
+
+        // this helps with self intersection because apparently we are getting that
+        vec3 origin = hr.hitpos + hr.normal * originEplison;
+        lastorigin = origin;
+        lastdir = reflect(incidentDir, hr.normal); // probably looks very off cause the normal is smooth
+        }
+        else {
+            colour += texture(cmMainHandle, incidentDir).rgb * dim;
+            //break;  
+        }
+    //}
+    specEmission = oEM /  clamp(hitcount, 1.0f, hitcount);
+    
+    return colour/ clamp(hitcount, 1.0f, hitcount);
 }
 
 struct indirectChannels{
@@ -844,30 +894,27 @@ void indirectAndEmissionMarch(vec3 pNrm, vec3 ro, float maxdist, float mindist, 
     int emHitCount = 0;
     for (int i = 0; i < samples; i++){
         indHitCount++;
+        
+        vec3 newDir = sampleHemisphere(pNrm, float(i) + time);
 
-        vec3 newDir = sampleHemisphere(pNrm, i);
-        hitresult hr = raytraceRootHitST(ro, newDir, maxdist, mindist, steps, mdfLength);
+        #if accelMode == 0 // MDF
+            hitresult hr = raymarchScene(ro, newDir, maxdist, mindist, steps, mdfLength);
+        #elif accelMode == 1 // GDF
+            hitresult hr = raymarchGDFscene(ro, newDir, maxdist, mindist, steps);
+        #endif
         
         
         if (hr.isHit){
+            MDF cMDF = MDFS[hr.hitIndex];
             
-            MDF cMDF = MDFS[hr.materialIndex];
+            vec3 albedo = textureLod(sampler3D(GDFS[hr.cascade].handle2), hr.uvw, 0).rgb;
+            vec3 mEmission = textureLod(sampler3D(GDFS[hr.cascade].handle), hr.uvw, e_mip).yzw;
             
-            //material nMaterial = getMaterial(hr.materialIndex, hr.uv, i_minLodLevel);
-            vec3 arm = textureLod( cMDF.texture_roughness_Handle, hr.uv, i_minLodLevel).rgb;
-            vec4 mcolour = textureLod(cMDF.texture_diffuse_Handle, hr.uv, i_minLodLevel);
-            vec3 mEmission = textureLod(cMDF.texture_emission_Handle, hr.uv, e_minLodLevel).rgb;
-            
-            //vec3 origin = hr.hitpos + hr.normal * originEplison;
-
-            vec3 direct = lights(arm, hr.normal, hr.hitpos).rgb;
+            vec3 direct = lights(vec3(1.0, 1.0, 0.0), hr.normal, hr.hitpos).rgb;
             direct += directAmbient;
             direct = clamp(direct, 0.0, 1.0);
-            
-            // instead we can check the alpha and attempt to continue firing in a while loop for translucency
 
-
-            vec3 diffuseComponent = mcolour.rgb * direct;
+            vec3 diffuseComponent = albedo.rgb * direct;
             
             emHitCount++;
             emColour += mEmission * e_emissionBoost;
@@ -875,7 +922,7 @@ void indirectAndEmissionMarch(vec3 pNrm, vec3 ro, float maxdist, float mindist, 
             indColour += diffuseComponent;
         }
         else {
-            vec3 sky = textureLod(cmMainHandle, newDir, 5).rgb;
+            vec3 sky = textureLod(cmMainHandle, newDir, 10).rgb;
             indColour += sky;
             //break;
         }
@@ -890,14 +937,6 @@ void indirectAndEmissionMarch(vec3 pNrm, vec3 ro, float maxdist, float mindist, 
     nIC.emission.rgb = emColour /clamp(emHitCount, 1, emHitCount);
 
     onic = nIC;
-}
-
-vec4 blueNoise4(){ // for fade out or opacity (cheap) (could fade out near farplane or nearplane)
-    vec2 texSize = vec2(textureSize(BlueNoiseHandle, 0));
-    vec2 offset = vec2(fract(frame * 0.618), fract(frame * 0.133));
-    vec2 noiseUV = (gl_FragCoord.xy / texSize) + offset;
-
-    return texture(BlueNoiseHandle, noiseUV);
 }
 
 vec3 rayDirfromCam(mat4 projection, mat4 view, vec2 uv){
@@ -965,41 +1004,164 @@ indirectChannels temporalAccumulate(indirectChannels Input, highp vec2 historyTe
     //float blendFactor = 0.9;
     //clamp(temporalAccumulationBlendFactor, 0.0, 0.9)
     float factor = clamp(temporalAccumulationBlendFactor, 0.0, 0.99);
-
-    // conserve brighter samples
-    float pLuma = lumaFromRGB(texture(hEmission, historyTexCoord).rgb);
-    float cLuma = lumaFromRGB(Input.emission.rgb);
-    float variance = abs(cLuma - pLuma);
-    variance = clamp(variance, 0.0, 1.0);
-    float cweight = mix(factor, 0.0, variance);
-    /**/
-
+    
     indirectChannels nIC; nIC = Input;
     nIC.indirect = accumulate(Input.indirect.rgb, hIndirect, historyTexCoord, factor);
-    nIC.emission = accumulate(Input.emission.rgb, hEmission, historyTexCoord, cweight);
-    if (roughness > 0.3){
-        nIC.idirectSpecular = accumulate(Input.idirectSpecular.rgb, hIndirectSpecular, historyTexCoord, factor);
-        nIC.emissionSpecular = accumulate(Input.emissionSpecular.rgb, hEmissionSpecular, historyTexCoord, factor);
-        nIC.specular = accumulate(Input.specular.rgb, hSpecular, historyTexCoord, factor).rgb;
+    nIC.emission = accumulate(Input.emission.rgb, hEmission, historyTexCoord, factor);
+    float rblendfactor = r_taBlendUnderTresh;
+    
+    if (roughness > r_taBlendTreshhold){
+        rblendfactor = factor;
     }
+    nIC.idirectSpecular = accumulate(Input.idirectSpecular.rgb, hIndirectSpecular, historyTexCoord, rblendfactor);
+    nIC.emissionSpecular = accumulate(Input.emissionSpecular.rgb, hEmissionSpecular, historyTexCoord, rblendfactor);
+    nIC.specular = accumulate(Input.specular.rgb, hSpecular, historyTexCoord, rblendfactor).rgb;
+    
     return nIC;
 }
 
-void main(){
+// thanks dustmite
+vec3 getViewPos(vec2 uv){
+    float depth = texture(depthMap, uv).r;
+    vec4 ndc = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    vec4 vp = invProjectionMatrix * ndc;
+    return vp.xyz / vp.w;
+}
+
+vec3 reconstructViewNormal(vec2 uv, vec3 vp){
+    vec2 texelSize = 1.0 / textureSize(depthMap, 0);
+    vec3 viewTop = getViewPos(uv + vec2(0.0, texelSize.y));
+    vec3 viewRight = getViewPos(uv + vec2(texelSize.x, 0.0));
     
+    vec3 dx = viewRight - vp;
+    vec3 dy = viewTop - vp;
+    
+    return normalize(cross(dx, dy));
+}
+
+vec3 reconstructWorldNormal(vec2 uv, vec3 vp){
+    return normalize(mat3(invViewMatrix) * reconstructViewNormal(uv, getViewPos(uv)));
+}
+
+vec3 raytocam(vec3 position){
+    vec2 ndc = (texCoord / screenSize) * 2.0 - 1.0;
+    vec4 clippos = vec4(ndc, -1.0, 1.0);
+    vec4 wp = invCameraMatrix * clippos;
+    vec3 pixelwp = wp.xyz / wp.w;
+    
+    return normalize(pixelwp - position);
+}
+
+vec3 offsetPosition(vec3 pos, float mindist, float elipson){
+    vec3 rnrm = reconstructWorldNormal(texCoord, getViewPos(texCoord) );
+    vec3 dpos = pos + rnrm * elipson;
+    return dpos;
+}
+vec3 pushoutPosition(vec3 pos, float minDist, float maxdist, int fromCamSteps, int toCamSteps, int pushSteps, float elipson){
+    float nThickness = 0.0; int intd = 0;
+
+    vec3 rnrm = reconstructWorldNormal(texCoord, getViewPos(texCoord) );
+    // cheaper to try offsetting it first
+    vec3 dpos = pos + rnrm * elipson;
+    float fdist = gdfScene(dpos, nThickness, intd).r;
+
+    if (fdist > minDist) return dpos;
+
+    // try pushing out
+    vec3 nPos = dpos;
+    for (int x = 0; x < pushSteps; x++){
+        float dist = gdfScene(nPos, nThickness, intd).r;
+        nPos = nPos + rnrm * abs(min(dist, minDist));
+        if (dist > minDist) return nPos;
+    }
+
+    vec2 uv = (texCoord - 0.5) * 2.0;
+    vec3 cameraRayDir = rayDirfromCam(invProjectionMatrix, invViewMatrix, uv);
+    
+    #if accelMode == 0
+    hitresult hr = raymarchScene(cameraPosition, cameraRayDir, maxdist, minDist, fromCamSteps, MDFS.length());
+    #elif accelMode == 1
+    hitresult hr = raymarchGDFscene(cameraPosition, cameraRayDir, maxdist, minDist, fromCamSteps);
+    #endif
+    if (!hr.isHit) {
+        vec3 rd = raytocam(nPos);
+        hitresult hr2 = raymarchGDFinverseScene(nPos, rd, maxdist, minDist, toCamSteps);   
+        if (!hr2.isHit) return nPos;
+        return hr2.hitpos + rnrm * 0.01;
+    }
+
+    return hr.hitpos;
+}
+
+// Copyright 2019 Google LLC.
+// SPDX-License-Identifier: Apache-2.0
+
+// Polynomial approximation in GLSL for the Turbo colormap
+// Original LUT: https://gist.github.com/mikhailov-work/ee72ba4191942acecc03fe6da94fc73f
+
+// Authors:
+//   Colormap Design: Anton Mikhailov (mikhailov@google.com)
+//   GLSL Approximation: Ruofei Du (ruofei@google.com)
+
+vec3 TurboColormap(in float x) {
+    const vec4 kRedVec4 = vec4(0.13572138, 4.61539260, -42.66032258, 132.13108234);
+    const vec4 kGreenVec4 = vec4(0.09140261, 2.19418839, 4.84296658, -14.18503333);
+    const vec4 kBlueVec4 = vec4(0.10667330, 12.64194608, -60.58204836, 110.36276771);
+    const vec2 kRedVec2 = vec2(-152.94239396, 59.28637943);
+    const vec2 kGreenVec2 = vec2(4.27729857, 2.82956604);
+    const vec2 kBlueVec2 = vec2(-89.90310912, 27.34824973);
+
+    x = clamp(x, 0.0, 1.0);
+    vec4 v4 = vec4( 1.0, x, x * x, x * x * x);
+    vec2 v2 = v4.zw * v4.z;
+    return vec3(
+            dot(v4, kRedVec4)   + dot(v2, kRedVec2),
+            dot(v4, kGreenVec4) + dot(v2, kGreenVec2),
+            dot(v4, kBlueVec4)  + dot(v2, kBlueVec2)
+    );
+}
+
+void main(){
     int mdfLength = MDFS.length();
+    
+    #if drawSDFSCENE == 1 // SDF SCENE VIEW
+        vec2 uv = (texCoord - 0.5) * 2.0;
+        vec3 rayDir = rayDirfromCam(invProjectionMatrix, invViewMatrix, uv);
+    
+        //return;
+        //hitresult hr = raytraceRootHitST(cameraPosition, rayDir, 128, mindist, 128, mdfLength);
+        #if accelMode == 0
+            hitresult hr = raymarchScene(cameraPosition, rayDir, 80, 0.01, 256, mdfLength);
+            vec4 albedo = textureLod(sampler3D(MDFS[hr.hitIndex].ALB_Handle), hr.uvw, 0);
+        #elif accelMode == 1
+            hitresult hr = raymarchGDFscene(cameraPosition, rayDir, 80, 0.01, 800);
+            vec4 albedo = textureLod(sampler3D(GDFS[hr.cascade].handle2), hr.uvw, 0);
+        #endif
+
+
+        vec3 direct = lights(vec3(1.0, 1.0, 0.0), hr.normal, hr.hitpos).rgb;
+        direct += 0.5;
+        direct = clamp(direct, 0.0, 1.0);
+        //ospecular.rgb = albedo.rgb * direct;
+    
+        ospecular.rgb = TurboColormap(clamp(float(hr.iterationsDBG), 0.0, 1.0));
+        //ospecular.rgb = hash31(float(hr.cascade)) * hr.iterationsDBG * 15.0;//   clamp(hr.iterationsDBG, 0.0, 1.0);
+        //ospecular.rgb = textureLod(MDFS[hr.materialIndex].texture_diffuse_Handle, hr.uv, 0).rgb;
+        //vec3(0.2 + 0.4 * mod(floor(p.x) + floor(p.z), 2.0));
+        //ospecular.rgb = mix(vec3(0.0), hr.hitpos, triplanarTile(hr.hitpos, hr.normal, 2.0).r);
+        //ospecular.rgb = hr.colour;
+        //ospecular.rgb = textureLod(sampler3D(GDFS[hr.cascade].handle2), hr.uvw, 0).rgb * hash31(float(hr.cascade));
+
+    
+        //ospecular.rgb = vec3(hr.iterationsDBG * 15.0);
+        //ospecular.rgb = vec3(hr.uv, 0.0);
+        //ospecular.rgb = mix(ospecular,  hash31(float(hr.materialIndex)), 0.5);
+        //ospecular = hash31(hr.materialIndex);
+        return;
+    #endif
 
     bool split = true;
     if (gl_FragCoord.x > screenSize.x / 2 && doDenoiseSplitDBGView) split = false;
-    
-    if (drawSDFSCENE && split){ // SDF SCENE VIEW
-        vec2 uv = (texCoord - 0.5) * 2.0;
-        vec3 rayDir = rayDirfromCam(invProjectionMatrix, invViewMatrix, uv);
-
-        hitresult hr = raytraceRootHitST(cameraPosition, rayDir, 128, mindist, 128, mdfLength);
-        ospecular.rgb = textureLod(MDFS[hr.materialIndex].texture_diffuse_Handle, hr.uv, 0).rgb;
-        return;
-    }
 
     float gdepth = texture2D(depthMap, texCoord).r;
     if (gdepth >= 0.99999) discard;
@@ -1007,6 +1169,7 @@ void main(){
     vec3 gp = texture(gPosition, texCoord).xyz;
     //vec3 gp                  = WorldPosFromDepth(gdepth, invProjectionMatrix, invViewMatrix);
     vec3 gnrm              = normalize(texture(gNormal, texCoord).xyz);
+    //vec3 rnrm = reconstructWorldNormal(texCoord, getViewPos(texCoord));
     vec3 galbedo          = texture(gAlbedoSpec, texCoord).xyz;
     vec3 gemission       = texture(gEmission, texCoord).xyz;
     vec3 garm              = texture(gSpecular, texCoord).xyz;
@@ -1014,24 +1177,54 @@ void main(){
     //odirect.rgb = gp2;
     //return;
     
-    if (forceMirror) {garm.g = 0.0; garm.b = 1.0;}
-    garm.g = max(r_roughnessFloor, garm.g);
-    vec4 noise = blueNoise4();
-    // final lighting
+    #if forceMirror == 1 
+        garm.g = 0.0;
+        garm.b = 1.0;
+    #elif forceMirror == 2
+        garm.g = 0.0;
+    #endif
     
-    vec3 origin = gp + gnrm * originEplison;
+    #if r_roughnessFloorEnabled == 1
+        garm.g = max(r_roughnessFloor, garm.g);
+    #endif
+    // final lighting
+    //vec3 origin = gp + gnrm * originEplison;
+    //origin = testAndPushoutPosition(origin, rnrm, minIntersectionDist, 32);
+    //vec3 origin = pushoutPosition(gp, minIntersectionDist, 100.0, 32, 4, 4, originEplison);
+    vec3 origin = offsetPosition(gp, minIntersectionDist, originEplison);
+    //float ndist = distance(origin, gp);
+    //vec3 vp = (invViewMatrix * vec4(getViewPos(texCoord), 1.0)).xyz;
+    //ospecular.rgb = origin * ndist;;
+
+    //ospecular.rgb = vec3(ndist);
+    //ospecular.rgb = vec3(normalize(gp - origin));
+    //return;
     
     indirectChannels nIC;
     vec3 tRef = vec3(0.0f);
     vec3 tRefEM = vec3(0.0f);
-    if (noise.b <= r_noiseThreshold )  tRef = reflection(garm, gnrm, origin, reflect(normalize(gp - cameraPosition),  gnrm),
-            r_maxdist, mindist, r_steps, r_bounces, r_samples, velocity, tRefEM, mdfLength);
-    if (noise.g <=  i_noiseThreshold ) indirectAndEmissionMarch(gnrm, origin, i_maxdist, mindist, i_steps, i_samples, nIC, mdfLength);
+    
+    #if doReflection == 1
+    tRef = reflection(garm, gnrm, origin, reflect(normalize(gp - cameraPosition),  gnrm), r_maxdist, mindist, r_steps, velocity, tRefEM, mdfLength);
+    #endif
+    indirectAndEmissionMarch(gnrm, origin, i_maxdist, mindist, i_steps, i_samples, nIC, mdfLength);
 
     vec3 null = vec3(1.0f, 0.0f, 0.0f);
     nIC.idirectSpecular.rgb = null;
     nIC.emissionSpecular.rgb = tRefEM;
     nIC.specular = tRef;
+    
+    #if indirectMetallicMode == 1
+        float met = garm.b;
+    
+        vec3 F0 = mix(vec3(0.04), galbedo, met);
+        vec3 Fresnel = fresnelSchlick(max(dot(gnrm, normalize(cameraPosition - gp)), 0.0), F0);
+        
+        float specularWeight = mix(0.04, 1.0, met);
+        vec3 diffuseWeight = (1.0 - Fresnel) * (1.0 - met);
+        
+        nIC.indirect.rgb *= clamp(diffuseWeight, 0.0, 1.0);
+    #endif
     
     // temporal accumulation here
     

@@ -87,10 +87,13 @@ uniform float smoothnessValue;
 uniform bool doBinaryAlpha;
 uniform bool animateBinaryAlpha;
 
+uniform int drawIndex;
+uniform int meshIndex;
+uniform int totalDrawCount;
+
 float linearizeDepth(float depth, float NP, float FP) { return (2.0 * NP * FP) / (FP + NP - (depth * 2.0 - 1.0) * (FP - NP)); }
 
-vec3 CalcNewNormal(vec2 UV)
-{
+vec3 CalcNewNormal(vec2 UV){
 	//	return normalize(Normal); 
 	// texture
 	//vec3 normalTex = texture(texture_normal0, texCoord).xyz;
@@ -115,14 +118,12 @@ vec3 CalcNewNormal(vec2 UV)
 }
 
 float random(vec3 seed) {
-
 	vec4 seed4 = vec4(seed, 1.0);
 	float dot_product = dot(seed4, vec4(12.9898, 78.233, 45.164, 94.673));
 	return fract(sin(dot_product) * 43758.5453);
 }
 
-float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal)
-{
+float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal){
 	// perform perspective divide
 	vec3 lightCoords = LightSpacePos.xyz / LightSpacePos.w;
 	float shadow = 0.0f;
@@ -168,8 +169,7 @@ float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal)
 return shadow;
 }
 
-vec4 direcLight(sampler2D specSamp)
-{ // normals need to be recalculated based on rotation
+vec4 direcLight(sampler2D specSamp){ // normals need to be recalculated based on rotation
 
 
 
@@ -201,8 +201,7 @@ vec4 direcLight(sampler2D specSamp)
 	else{ return ((diffuse * (1.0f - shadow) + directAmbient)) * vec4(directLightCol, 1.0f); }
 }
 
-vec4 pointLight(int iteration, sampler2D specSamp)
-{	
+vec4 pointLight(int iteration, sampler2D specSamp){	
 	vec4 finalColour = vec4(0.0f);
 
 	
@@ -245,8 +244,7 @@ vec4 pointLight(int iteration, sampler2D specSamp)
 	return finalColour;
 }
 
-vec4 spotLight(int iteration, sampler2D specSamp)
-{
+vec4 spotLight(int iteration, sampler2D specSamp){
 	// controls how big the area that is lit up is
 	float outerCone = 0.90f;
 	float innerCone = 0.95f;
@@ -322,9 +320,7 @@ float rand(vec2 co){
 }
 
 
-vec3 sampleHemisphere2(vec3 normal, float u, float v)
-{
-
+vec3 sampleHemisphere2(vec3 normal, float u, float v){
 	float phi = 2.0 * 3.14159265 * u;
 	float cosTheta = sqrt(1.0 - v);
 	float sinTheta = sqrt(v);
@@ -338,8 +334,7 @@ vec3 sampleHemisphere2(vec3 normal, float u, float v)
 	return tangent * localDir.x + bitangent * localDir.y + normal * localDir.z;
 }
 
-vec3 sampleHemisphere(vec3 normal, float random)
-{
+vec3 sampleHemisphere(vec3 normal, float random){
     float u = rand(vec2(gl_FragCoord.xy) + random); 
     float v = rand(vec2(u, random));
 
@@ -357,8 +352,7 @@ vec3 sampleHemisphere(vec3 normal, float random)
 }
 
 	// (thanks learnopengl)
-float GeometrySchlickGGX(float NdotV, float roughness)
-{
+float GeometrySchlickGGX(float NdotV, float roughness){
     float a = roughness;
     float k = (a * a) / 2.0;
 
@@ -368,8 +362,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
 	return nom / max(denom, 0.0001);
 }
 
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
-{
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness){
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
     float ggx2 = GeometrySchlickGGX(NdotV, roughness);
@@ -378,8 +371,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
     return ggx1 * ggx2;
 }  
 
-vec3 metRough(vec3 albedo, out vec3 nFer, out float nMet, out vec3 irradiance, sampler2D specSamp)
-{
+vec3 metRough(vec3 albedo, out vec3 nFer, out float nMet, out vec3 irradiance, sampler2D specSamp){
 	// textures
 	vec3 metallicRoughness = texture(specSamp, texCoord).rgb; // metalic
 	float rough = metallicRoughness.g;
@@ -416,29 +408,31 @@ vec3 metRough(vec3 albedo, out vec3 nFer, out float nMet, out vec3 irradiance, s
 	return reflectionColour * F * G;
 }
 
-// looks best on glass and solids
-bool BayerNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (could fade out near farplane or nearplane)
-{
+void BayerNoiseOpacity(float Threshold){
 	sampler2D baySamp = sampler2D(bayerMatrixHandle);
-	vec2 bayUV = vec2(gl_FragCoord.xy) / vec2(textureSize(baySamp, 0)); // new uvec2
+	vec2 texSize = vec2(textureSize(baySamp, 0));
+
+	int nFrame = totalDrawCount;
+	vec2 offset = vec2(fract(nFrame * 0.618), fract(nFrame * 0.133));
+	vec2 bayUV = (gl_FragCoord.xy / texSize) + offset;
 	float bayer = texture(baySamp, bayUV).r;
+
 
 	float clampedThreshold = clamp(Threshold, 0.2, 1.0);
 
 	// normal ranges should be 0.0f-1.0f;
-	if (bayer > Threshold || Threshold <= 0) return true;
-	
-	return false;
+	if (bayer > Threshold) discard;
 }
 
 // looks best on decals and foliage
-bool blueNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (could fade out near farplane or nearplane)
-{
+bool blueNoiseOpacity(float Threshold){ // for fade out or opacity (cheap) (could fade out near farplane or nearplane)
 	sampler2D bluemap =sampler2D(BlueNoiseHandle) ;
 	vec2 texSize = vec2(textureSize(bluemap, 0));
-
-	vec2 offset = vec2(0.0,0.0);
-	if (animateBinaryAlpha) offset = vec2(fract(frame * 0.618), fract(frame * 0.133));
+	
+	//int nFrame = frame + drawIndex + meshIndex;
+	int nFrame = totalDrawCount;
+	if (animateBinaryAlpha) nFrame += frame;
+	vec2 offset = vec2(fract(nFrame * 0.618), fract(nFrame * 0.133));
 	
 	vec2 noiseUV = (gl_FragCoord.xy / texSize) + offset;
 
@@ -505,8 +499,7 @@ vec3 rough(sampler2D specSamp){
 }
 
 
-vec3 indirectIBL(int samples, sampler2D specSamp)
-{
+vec3 indirectIBL(int samples, sampler2D specSamp){
 
 	vec3 metallicRoughness = texture(specSamp, texCoord).rgb; // metalic
 
@@ -538,8 +531,7 @@ vec3 indirectIBL(int samples, sampler2D specSamp)
 	vec2 scrollingUV = noiseUV + fract(time * vec2(12.9898, 78.233));
 	vec2 blueNoise = texture(bluemap, scrollingUV).rg;
 	
-	for (int i = 0; i < samples; i++)
-	{
+	for (int i = 0; i < samples; i++){
 	//gl_FragCoord
 		//vec3 randomDir = sampleHemisphere(normalize(NreflectedVector), i + (gl_FragCoord.z * time));
 
@@ -571,8 +563,7 @@ vec3 indirectIBL(int samples, sampler2D specSamp)
 	//return (indirectColour / samples) * met;
 }
 
-float logisticDepth(float depth, float steepness, float offset, float NearPlane, float FarPlane)
-{
+float logisticDepth(float depth, float steepness, float offset, float NearPlane, float FarPlane){
     float zVal = linearizeDepth(depth, NearPlane, FarPlane);
     float expVal = exp(clamp(-steepness * (zVal - offset), -10.0, 10.0));
     return 1.0 / (1.0 + expVal);
@@ -602,7 +593,8 @@ void main(){
 	if (albedo.a <= 0.0)
 	discard;
 
-	if (blueNoiseOpacity(albedo.a) && doBinaryAlpha) discard;
+	//if (blueNoiseOpacity(albedo.a) && doBinaryAlpha) discard;
+	if (blueNoiseOpacity(albedo.a) && doBinaryAlpha)discard;
 	//if (BayerNoiseOpacity(albedo.a)) discard;
 	vec3 specular = vec3(0.0f);
 	vec3 diffuse  = vec3(0.0f);

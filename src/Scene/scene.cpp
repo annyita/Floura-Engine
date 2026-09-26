@@ -37,9 +37,7 @@ void Scene::calculateSceneBounds()
 	std::vector<Collision::AABB> AABBs;
 
 	for (size_t i = 0; i < entityObjects.size(); i++)
-	{
-		for (size_t x = 0; x < entityObjects[i]->component.collider.rootnodes.size(); x++)
-		{
+		for (size_t x = 0; x < entityObjects[i]->component.collider.rootnodes.size(); x++){
 			// position, scale
 			glm::vec3 p = entityObjects[i]->component.collider.rootnodes[x].position;
 			glm::vec3 s = entityObjects[i]->component.collider.rootnodes[x].size;
@@ -59,7 +57,6 @@ void Scene::calculateSceneBounds()
 			points.push_back(newMinMax.max);
 			points.push_back(newMinMax.min);
 		}	
-	}
 
 	rootnodes = AABBs;
 	SceneBounds = Collision::createAABBfromPoints(points);
@@ -72,23 +69,21 @@ void Scene::init() {
 
 }
 
-void Scene::loadSceneStateless(std::string path)
-{
+void Scene::loadSceneStateless(std::string path){
 	// Attemp to delete previous scene
 	Delete();
 
-	if (FEImGuiWindow::imGuiEnabled) {
+	if (FEImGuiWindow::imGuiEnabled) 
 		FEImGuiWindow::loadContentObjects(path + "/ContentObject.scene");
-	}
 
 	settingsLoad(path + "/Settings.scene");
 	LightingHandler::loadScene(path + "/Lights.scene");
 	enviromentLoad(path + "/Enviroment.scene"); // gives DefaultSkyboxPath
 	Skybox::LoadSkyBoxTexture(Skybox::DefaultSkyboxPath); // cleanup this class, could add a load cubemap texture function to the texture class
-	billBoardLoad(path + "/BillBoard.scene"); // here
-	modelLoad(path + "/Model.scene");
 	soundObjectLoad(path + "/Sound.scene");
 	cameraSettingsLoad(path + "/Camera.scene");
+	billBoardLoad(path + "/BillBoard.scene"); // here
+	modelLoad(path + "/Model.scene");
 }
 
 void Scene::loadScene(std::string path) {
@@ -96,20 +91,49 @@ void Scene::loadScene(std::string path) {
 	// Attemp to delete previous scene
 	Delete();
 
-	if (FEImGuiWindow::imGuiEnabled) {
+	if (FEImGuiWindow::imGuiEnabled)
 		FEImGuiWindow::loadContentObjects(path + "/ContentObject.scene");
-	}
 
 	settingsLoad(path + "/Settings.scene");
 	LightingHandler::loadScene(path + "/Lights.scene");
 	enviromentLoad(path + "/Enviroment.scene"); // gives DefaultSkyboxPath
 	Skybox::LoadSkyBoxTexture(Skybox::DefaultSkyboxPath); // cleanup this class, could add a load cubemap texture function to the texture class
-	billBoardLoad(path + "/BillBoard.scene"); // here
-	modelLoad(path + "/Model.scene");
 	soundObjectLoad(path + "/Sound.scene");
 	cameraSettingsLoad(path + "/Camera.scene");
+	billBoardLoad(path + "/BillBoard.scene"); // here
+	modelLoad(path + "/Model.scene");
 
 	LogConsole::print("Loaded scene from: " + path);
+}
+
+void Scene::saveSceneStateless(std::string path){
+	if (FEImGuiWindow::imGuiEnabled)
+		FEImGuiWindow::saveContentObjects(path + "/ContentObject.scene");
+
+	settingsSave(path + "/Settings.scene");
+	LightingHandler::saveScene(path + "/Lights.scene");
+	enviromentSave(path + "/Enviroment.scene");
+	soundObjectSave(path + "/Sound.scene");
+	cameraSettingsSave(path + "/Camera.scene");
+	billBoardSave(path + "/BillBoard.scene");
+	modelSave(path + "/Model.scene");
+}
+
+
+void Scene::saveScene(std::string path) {
+	Player::stopState();
+	if (FEImGuiWindow::imGuiEnabled)
+		FEImGuiWindow::saveContentObjects(path + "/ContentObject.scene");
+
+	settingsSave(path + "/Settings.scene");
+	LightingHandler::saveScene(path + "/Lights.scene");
+	enviromentSave(path + "/Enviroment.scene");
+	soundObjectSave(path + "/Sound.scene");
+	cameraSettingsSave(path + "/Camera.scene");
+	billBoardSave(path + "/BillBoard.scene");
+	modelSave(path + "/Model.scene");
+
+	LogConsole::print("Saved scene to: " + path);
 }
 
 void Scene::reloadScene(std::string path){
@@ -119,7 +143,6 @@ void Scene::reloadScene(std::string path){
 			FEImGuiWindow::ContentObjectNames.clear();
 			FEImGuiWindow::ContentObjectPaths.clear();
 			FEImGuiWindow::ContentObjectTypes.clear();
-
 		}
 
 		FEImGuiWindow::loadContentObjects(path + "/ContentObject.scene");
@@ -156,39 +179,6 @@ void Scene::reloadScene(std::string path){
 
 
 	LogConsole::print("Reloaded scene from: " + path);
-}
-
-void Scene::saveSceneStateless(std::string path)
-{
-	if (FEImGuiWindow::imGuiEnabled) {
-		FEImGuiWindow::saveContentObjects(path + "/ContentObject.scene");
-	}
-
-	settingsSave(path + "/Settings.scene");
-	LightingHandler::saveScene(path + "/Lights.scene");
-	enviromentSave(path + "/Enviroment.scene");
-	billBoardSave(path + "/BillBoard.scene");
-	modelSave(path + "/Model.scene");
-	soundObjectSave(path + "/Sound.scene");
-	cameraSettingsSave(path + "/Camera.scene");
-}
-
-
-void Scene::saveScene(std::string path) {
-	Player::stopState();
-	if (FEImGuiWindow::imGuiEnabled) {
-		FEImGuiWindow::saveContentObjects(path + "/ContentObject.scene");
-	}
-
-	settingsSave(path + "/Settings.scene");
-	LightingHandler::saveScene(path + "/Lights.scene");
-	enviromentSave(path + "/Enviroment.scene");
-	billBoardSave(path + "/BillBoard.scene");
-	modelSave(path + "/Model.scene");
-	soundObjectSave(path + "/Sound.scene");
-	cameraSettingsSave(path + "/Camera.scene");
-
-	LogConsole::print("Saved scene to: " + path);
 }
 
 
@@ -238,7 +228,6 @@ void Scene::enviromentSave(std::string path){
 		// Write back to file
 		std::ofstream outFile(path, std::ios::out);
 		if (!outFile.is_open()) {
-
 			std::cout << ("Failed to write to ") << path << std::endl;
 		}
 
@@ -300,8 +289,7 @@ void Scene::enviromentLoad(std::string path)
 	}
 }
 
-void Scene::modelReload(std::string path)
-{
+void Scene::modelReload(std::string path){
 	std::ifstream file(path);
 	if (!file.is_open()) {
 		std::cout << "Model Failed to open file: " << path << std::endl;
@@ -333,7 +321,7 @@ void Scene::modelReload(std::string path)
 		
 		//std::cout << "pre"<< entityObjects[index]->UUID << std::endl;
 		//std::cout << "new"<< tempUUID << std::endl;
-		if (entityObjects[index]->UUID != tempUUID) { index++; continue; } // index++; // segfault here 
+		if (entityObjects[index]->UUID != tempUUID) continue; // index++; // segfault here 
 
 		//std::cout << "ee" << std::endl;
 
@@ -354,8 +342,6 @@ void Scene::modelReload(std::string path)
 
 		entityObjects[index]->component.render.drawInstanced = item.at("drawInstanced").get<bool>();
 
-		entityObjects[index]->component.render.smoothnessValue = item.at("smoothnessValue").get<float>();
-
 		//newObject->create('m', name, path, MaterialPath); // Load into this unique MaterialObject // this needs to run and somehow join up when complete?
 		// what about the idea of creating them in a state without a actual model, then doing the create function on a thread and push back when joinable;
 
@@ -363,7 +349,6 @@ void Scene::modelReload(std::string path)
 		entityObjects[index]->component.flags.render = item.at("doRender").get<bool>();
 
 		for (auto* script : entityObjects[index]->ScriptObjects) {
-
 			delete script;
 		}
 		entityObjects[index]->ScriptObjects.clear();
@@ -412,10 +397,7 @@ void Scene::modelReload(std::string path)
 			}
 
 		}
-
-
-
-
+		
 		index++;
 	}
 	std::cout << "Reloaded Scene Models from: " << path << std::endl;
@@ -465,7 +447,6 @@ void Scene::modelLoad(std::string path) {
 			newObject->component.systems.material.uvScale = glm::vec2(item.at("uvScale")[0],
 				item.at("uvScale")[1]);
 		if (item.contains("drawInstanced"))newObject->component.render.drawInstanced = item.at("drawInstanced").get<bool>();
-		if (item.contains("smoothnessValue"))newObject->component.render.smoothnessValue = item.at("smoothnessValue").get<float>();
 		if (item.contains("doRender"))newObject->component.flags.render = item.at("doRender").get<bool>();
 
 
@@ -495,7 +476,6 @@ void Scene::modelLoad(std::string path) {
 
 				newObject->component.relationship.childUUID.push_back(childUUID);
 			}
-
 		}
 
 		if (item.contains("hasParent")) newObject->component.relationship.hasParent = item.at("hasParent").get<bool>();
@@ -507,9 +487,6 @@ void Scene::modelLoad(std::string path) {
 		entityObjects.push_back(std::move(newObject));
 		
 		entityObjects.back()->createwUUID(tempUUID, entity::ENT_MODEL_TYPE, name, path, MaterialPath);
-
-
-
 	}
 	std::cout << "Loaded Scene Models from: " << path << std::endl;
 }
@@ -542,7 +519,6 @@ void Scene::modelSave(std::string path) {
 				modelJson["drawInstanced"] = Scene::entityObjects[i]->component.render.drawInstanced;
 
 				modelJson["doRender"] = entityObjects[i]->component.flags.render;
-				modelJson["smoothnessValue"] = entityObjects[i]->component.render.smoothnessValue;
 				modelJson["UUID"] = entityObjects[i]->UUIDstring;
 
 
@@ -976,12 +952,9 @@ void Scene::shadowmapDraw(){
 	}
 }
 
-void Scene::callAllScriptInit()
-{
-	for (size_t i = 0; i < entityObjects.size(); i++)
-	{
-		for (size_t x = 0; x < entityObjects[i]->ScriptObjects.size(); x++)
-		{
+void Scene::callAllScriptInit(){
+	for (size_t i = 0; i < entityObjects.size(); i++){
+		for (size_t x = 0; x < entityObjects[i]->ScriptObjects.size(); x++){
 			entityObjects[i]->initScript(x);
 		}
 	}
@@ -1063,8 +1036,6 @@ void Scene::Update() {
 			SoundObjects[i].PlaySound();
 		}
 	}
-
-	ProbeHandler::dirtyScene = false;
 }
 
 // update but on the work thread (expensive tasks)
@@ -1123,7 +1094,6 @@ void Scene::queuedDeletionLoop(){
 		if (Scene::entityObjects[i]->queuedForDeletion){
 			Scene::entityObjects[i]->queuedDeletion();
 			Scene::entityObjects.erase(Scene::entityObjects.begin() + i);
-
 		}
 	}
 	Scene::entityDeletionUnderGoing = false;
@@ -1205,7 +1175,7 @@ void Scene::tagMeshes(glm::vec3 p, glm::vec3 s, std::vector<Mesh*>& meshes, std:
 				FE_Math::transformPoint(nVertices[y].position, fMatrix);
 			
 			// generate prims
-			std::vector<BVH::BVH_primitive> nPrims = BVH::buildIndicesIntoPrims(nVertices,
+			std::vector<accelerate::BVH_primitive> nPrims = accelerate::buildIndicesIntoPrims(nVertices,
 				 RenderHandler::models[mIndex].model->meshes[x].indices);
 
 

@@ -41,8 +41,7 @@ float calculateExposure(vec3 avgColor){
 }
 
 // https://www.shadertoy.com/view/XdcXzn# credit here for this one
-mat4 saturationMatrix( float saturation )
-{
+mat4 saturationMatrix( float saturation ){
     vec3 luminance = vec3( 0.3086, 0.6094, 0.0820 );
 
     float oneMinusSat = 1.0 - saturation;
@@ -103,8 +102,7 @@ vec3 filmgrain(vec3 colour, float amount, float randomValue)
   return colour + noise.r * amount;
 }
 
-vec3 filmgrainColoured(vec3 colour, float amount, float randomValue)
-{
+vec3 filmgrainColoured(vec3 colour, float amount, float randomValue){
   float r = random(vec2(texCoords.x + randomValue, texCoords.y + randomValue) );
   float g = random(vec2(texCoords.x + randomValue + 0.1, texCoords.y + randomValue + 0.3) );
   float b = random(vec2(texCoords.x + randomValue + 0.2, texCoords.y + randomValue) );
@@ -130,8 +128,7 @@ float sobelKernel[9] = float[](
 1.0, 1.0,  1.0
 );
 
-vec3 sobel(sampler2D tex)
-{
+vec3 sobel(sampler2D tex){
     vec2 texelSize = 1.0 / textureSize(tex, 0);
     
     vec2 offsets[9] = vec2[](
@@ -158,13 +155,12 @@ vec3 sobel(sampler2D tex)
 }
 
 vec3 spawnSharpenedImage(sampler2D image, vec2 texCoord2, float weight) {
+    
+    float nSharpness = weight * sharpness;
+    if (nSharpness <= 0.0) return texture(image, texCoords).rgb;
 
     vec2 texelSize = 1.0 / textureSize(image, 0);
     
-    float nSharpness = weight * sharpness;
-    //float nSharpness = luma;
-    //float nSharpness =sharpness;
-
     float neighbor = nSharpness * -1.0;
     float center = nSharpness * 4.0 + 1.0;
     
@@ -179,30 +175,40 @@ float linearizeDepth(float depth, float NearPlane, float FarPlane){
     return (2.0 * NearPlane * FarPlane) / (FarPlane + NearPlane - (depth * 2.0 - 1.0) * (FarPlane - NearPlane));
 }
 
+vec3 getCA(sampler2D Input, vec2 tc, float iOffset){
+    return vec3(
+            texture(Input, tc - iOffset).r,
+            texture(Input, tc).g,
+            texture(Input, tc + iOffset).b
+    );
+}
 
 void main() {
     //FragColor.rgb =texture(screenTexture, texCoords).rgb; return;
     
     //float lumaSobel = lumaFromRGB(sobel(depthTexture));
+    //vec3 edges = vec3(clamp(lumaSobel * 500.0, 0.0, 1.0));
     //if (lumaSobel > 0.00001f) lumaSobel = 1.0;
     //lumaSobel = clamp(lumaSobel, 0.0, 1.0);
    // lumaSobel = 1.0 - lumaSobel;
     
     //float luma = lumaFromRGB(texture(screenTexture, texCoords).rgb);
     
-    //vec3 colour = spawnSharpenedImage(screenTexture, texCoords, lumaSobel * luma);
-    vec3 colour = texture(screenTexture, texCoords).rgb;
+    vec3 colour = spawnSharpenedImage(screenTexture, texCoords, 1.0);
+    //vec3 colour = texture(screenTexture, texCoords).rgb;
     vec3 nrm = texture(normal, texCoords).rgb;
     float depth = linearizeDepth(texture(depthTexture, texCoords).r, 0.1f, 100.0f);
    
-    colour = vignette(colour, 0.9, 0.5);
+    //colour = mix(colour, getCA(screenTexture, texCoords, 0.004f), 0.3f);
+    //colour = vignette(colour, 0.9, 0.5);
+    //colour = filmgrainColoured(colour, 0.03, random(texCoords * accum24value));
     
     int lastLOD = textureQueryLevels(screenTexture) - 1;
 	vec3 avgColour = textureLod(screenTexture, vec2(0.5, 0.5), lastLOD).rgb;
     //vec3 avgColour = textureLod(screenTexture, texCoords, lastLOD).rgb;
 
     float autoExposure = calculateExposure(avgColour);
-    ///float autoExposure = 0.1;
+    //float autoExposure = 3.0;
     
     vec3 tonemappedColour = vec3(1.0f) - exp(-colour  * autoExposure);
     //vec3 tonemappedColour = vec3(1.0f) - exp(-colour  * autoExposure);
@@ -224,7 +230,7 @@ void main() {
     vec3 lutSize = vec3(textureSize(LUT, 0));
     vec3 uvw = (colour.rgb * float(lutSize - 1.0) + 0.5) / lutSize;
     FragColor.rgb = texture(LUT, uvw).rgb;
-*/   
+   */
     
     if (overlayDebug){
         vec4 dbg = texture(dbgColour, texCoords);

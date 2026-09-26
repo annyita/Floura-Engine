@@ -44,7 +44,7 @@ void FlouraDeferred::DeferredLightingPass(){
 	
 	DFL_Shader.setTexture2D("gPosition", 1, GeometryPass::gPosition);
 	DFL_Shader.setTexture2D("gNormal", 2, GeometryPass::gNormal);
-	DFL_Shader.setTexture2D("gAlbedoSpec", 3, GeometryPass::gAlbedoSpec);
+	DFL_Shader.setTexture2D("gAlbedoSpec", 3, GeometryPass::gAlbedo);
 	DFL_Shader.setTexture2D("depthMap", 5, GeometryPass::depthTexture);
 	DFL_Shader.setTexture2D("gSpecular", 6, GeometryPass::gSpecular);
 	DFL_Shader.setTexture2D("gVelocity", 7, GeometryPass::gVelocity);
@@ -87,10 +87,11 @@ void FlouraDeferred::DeferredLightingPass(){
 	
 	DFL_Shader.setHandleui64ARB("BlueNoiseHandle", RenderClass::bluenoise->handle);
 	DFL_Shader.setHandleui64ARB("bayerMatrixHandle", RenderClass::bayermatrix->handle);
-
+	DFL_Shader.setHandleui64ARB("caustic", RenderClass::caustic->handle);
+	
 	//DFL_Shader.setBool("doSSR", RenderClass::doSSR);
 	DFL_Shader.setBool("doContactShadows", RenderClass::doContactShadows);
-
+	
 	DFL_Shader.setTimeVariables();
 	
 	LightingHandler::sendToShader(DFL_Shader);
@@ -109,7 +110,7 @@ void FlouraDeferred::ssrPass(){
 	SSR_Shader.setInt("screentexture", 0);
 	SSR_Shader.setTexture2D("gPosition", 1, GeometryPass::gPosition);
 	SSR_Shader.setTexture2D("gNormal", 2, GeometryPass::gNormal);
-	SSR_Shader.setTexture2D("gAlbedoSpec", 3, GeometryPass::gAlbedoSpec);
+	SSR_Shader.setTexture2D("gAlbedoSpec", 3, GeometryPass::gAlbedo);
 	SSR_Shader.setTexture2D("depthMap", 5, GeometryPass::depthTexture);
 	SSR_Shader.setTexture2D("gSpecular", 6, GeometryPass::gSpecular);
 	SSR_Shader.setTexture2D("gVelocity", 7, GeometryPass::gVelocity);

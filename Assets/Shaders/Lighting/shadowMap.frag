@@ -10,21 +10,33 @@ uniform bool animateBinaryAlpha;
 uniform int frame;
 uniform float time;
 
-void blueNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (could fade out near farplane or nearplane)
-{
+uniform int drawIndex;
+uniform int meshIndex;
+uniform int totalDrawCount;
+
+void blueNoiseOpacity(float Threshold){
 	sampler2D bluemap =sampler2D(BlueNoiseHandle) ;
-	vec2 noiseUV = vec2(gl_FragCoord.xy) / vec2(textureSize(bluemap, 0)); // new uvec2
+	vec2 texSize = vec2(textureSize(bluemap, 0));
+
+	int nFrame = totalDrawCount;
+	vec2 offset = vec2(fract(nFrame * 0.618), fract(nFrame * 0.133));
+
+	vec2 noiseUV = (gl_FragCoord.xy / texSize) + offset;
 	float noise = texture(bluemap, noiseUV).r;
 
 	// normal ranges should be 0.0f-1.0f;
 	if (noise > Threshold) discard;
 }
 
-void BayerNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (could fade out near farplane or nearplane)
-{
+void BayerNoiseOpacity(float Threshold){// for fade out or opacity (cheap) (could fade out near farplane or nearplane)
 	sampler2D baySamp = sampler2D(bayerMatrixHandle);
 	vec2 bayUV = vec2(gl_FragCoord.xy) / vec2(textureSize(baySamp, 0)); // new uvec2
-	float bayer = texture(baySamp, bayUV).r;
+
+	vec2 offset = vec2(0.0,0.0);
+	//int nFrame = drawIndex + meshIndex;
+	int nFrame = frame + totalDrawCount;
+	if (animateBinaryAlpha) offset = vec2(fract(nFrame * 0.618), fract(nFrame * 0.133));
+	float bayer = texture(baySamp, bayUV + offset).r;
 
 	float clampedThreshold = clamp(Threshold, 0.2, 1.0);
 
@@ -32,13 +44,14 @@ void BayerNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (coul
 	if (bayer > clampedThreshold || Threshold <= 0) discard;
 }
 
-void animatedBlueNoiseOpacity(float Threshold) // for fade out or opacity (cheap) (could fade out near farplane or nearplane)
-{
+void animatedBlueNoiseOpacity(float Threshold){// for fade out or opacity (cheap) (could fade out near farplane or nearplane)
 	sampler2D bluemap =sampler2D(BlueNoiseHandle) ;
 	vec2 texSize = vec2(textureSize(bluemap, 0));
-
-	vec2 offset = vec2(0.0,0.0);
-	if (animateBinaryAlpha) offset = vec2(fract(frame * 0.618), fract(frame * 0.133));
+	
+	//int nFrame = frame + drawIndex + meshIndex;
+	int nFrame = totalDrawCount;
+	if (animateBinaryAlpha)  nFrame += frame;
+	vec2 offset = vec2(fract(nFrame * 0.618), fract(nFrame * 0.133));
 
 	vec2 noiseUV = (gl_FragCoord.xy / texSize) + offset;
 
@@ -68,8 +81,7 @@ void scrollingBayerNoiseOpacity(float Threshold) // for fade out or opacity (che
 	if (bayer > Threshold) discard;
 }
 
-void main()
-{
+void main(){
 	sampler2D Sampler = sampler2D(texture_diffuse_Handle);
 	float diffuseTex = texture(Sampler, texCoord).a;
 
@@ -78,5 +90,5 @@ void main()
 
 	//scrollingBayerNoiseOpacity(diffuseTex);
 	//blueNoiseOpacity(diffuseTex);
-	BayerNoiseOpacity(diffuseTex);
+	animatedBlueNoiseOpacity(diffuseTex);
 }

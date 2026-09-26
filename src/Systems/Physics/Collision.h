@@ -120,13 +120,28 @@ public:
 	static Collision::AABB rootNodeFromRubixPointsNoPadding(Collision::rubiksCubePoints points,
 	glm::mat4 ModelMatrix);
 	
-	struct KDsplit
-	{
+	struct KDsplit{
 		AABB firstSplit;
 		AABB secondSplit;
 	};
 	
 	static KDsplit KDsplitVolume(glm::vec3 p, glm::vec3 extents);
+	
+	struct octSplit{
+		glm::vec3 size;
+		
+		glm::vec3 splitTRF;
+		glm::vec3 splitTRB;
+		glm::vec3 splitTLF;
+		glm::vec3 splitTLB;
+		
+		glm::vec3 splitDRF;
+		glm::vec3 splitDRB;
+		glm::vec3 splitDLF;
+		glm::vec3 splitDLB;
+	};
+	
+	static octSplit octSplitVolume(glm::vec3 p, glm::vec3 extents);
 	
 	// takes AABB return MinMax
 	static Collision::minmax returnMinMax(glm::vec3 p, glm::vec3 s);
@@ -162,13 +177,6 @@ public:
 		Collision::AABB voxel;
 		std::vector<GLuint> indices;
 	};
-	
-	static float distanceToClosestPointOnMesh(std::vector<Vertex> &vertices, std::vector<GLuint> &indices, glm::vec3 &P); 
-	
-	static float distanceToClosestPointOnMeshSDF(std::vector<Vertex> &vertices, std::vector<GLuint> &indices, glm::vec3 &P); 
-	static glm::vec3 distanceToClosestPointOnMeshSDF_PlusUV(std::vector<Vertex> &vertices, std::vector<GLuint> &indices, glm::vec3 &P); 
-	static glm::vec3 distanceToClosestPointOnMeshSDFAccel_PlusUV(std::vector<Vertex> &vertices, std::vector<voxelAccel>& voxelAccel, glm::vec3 &P); 
-
 	
 	static bool TrianglevsPoint(
 		const glm::vec3& P, const glm::vec3& A, const glm::vec3& B, const glm::vec3& C, float epsilon);
