@@ -7,9 +7,10 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z =8) in;
 //layout(rgba32f, binding = 0) uniform image3D outMDF;
-layout(rgba16f, binding = 0) uniform image3D outMDF;
+layout(r16f, binding = 0) uniform image3D outMDF; //gba
 //layout(r8_snorm, binding = 0) uniform image3D outMDF;
-layout(rgba8, binding = 1) uniform image3D outALB;
+layout(rg16f, binding = 1) uniform image3D outUV;
+//layout(r11f_g11f_b10f, binding = 2) uniform image3D outEM;
 
 struct triangle{
     vec4 a;
@@ -36,8 +37,8 @@ uniform vec3 ivScale;
 uniform float thickness;
 uniform bool accumulateMode;
 
-uniform sampler2D AlbedoHandle;
-uniform sampler2D EMHandle;
+//uniform sampler2D AlbedoHandle;
+//uniform sampler2D EMHandle;
 
 vec3 faceNormalFromTriangle(vec3 a, vec3 b, vec3 c){
     return normalize(cross(b - a, c - a));
@@ -239,11 +240,13 @@ void main() { // needs to take uv scale
     //vec4 dist = distanceToClosestPointOnMDFUVprimAABBless(wp, thickness); // 0.05 // 0.001
     vec4 dist = distanceToClosestPointOnMDFUVprim(wp, thickness); // 0.05 // 0.001
     vec2 nUV = dist.yz;
-    vec4 albedo = texture(AlbedoHandle, nUV);
-    vec4 EM = texture(EMHandle, nUV);
+    //vec4 albedo = texture(AlbedoHandle, nUV);
+    vec4 ruv = vec4(nUV, 0.0, 0.0);
+    //vec4 EM = texture(EMHandle, nUV);
     //EM.rgb = vec3(1.0);
 
-    vec4 final = vec4(dist.x, EM.rgb);
+    //vec4 final = vec4(dist.x, EM.rgb);
+    vec4 final = vec4(dist.x,0.0, 0.0, 0.0);
     
     if (accumulateMode){
         vec4 pMDF =imageLoad(outMDF, uvw);
@@ -252,11 +255,14 @@ void main() { // needs to take uv scale
         
         if (pMDF.x == d){
             final = pMDF;
-            EM = imageLoad(outALB, uvw);
+            ruv = imageLoad(outUV, uvw);
+            //EM = imageLoad(outEM, uvw);
         }
     }
     //vec4 final
     //dist
     imageStore(outMDF, uvw, final);
-    imageStore(outALB, uvw, albedo);
+    imageStore(outUV, uvw, ruv);
+    //imageStore(outEM, uvw, EM);
+    //imageStore(outALB, uvw, vec4(uvw,1.0));
 }

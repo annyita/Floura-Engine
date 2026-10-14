@@ -30,6 +30,7 @@ uniform uint64_t texture_diffuse_Handle;
 uniform uint64_t texture_roughness_Handle;
 uniform uint64_t texture_normal_Handle;
 uniform uint64_t texture_emission_Handle;
+uniform float emissionPowerFactor;
 //uniform uint64_t texture_displacement_Handle;
 
 uniform sampler2D shadowMap;
@@ -197,7 +198,7 @@ vec4 direcLight(sampler2D specSamp){ // normals need to be recalculated based on
 	//float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 16);
 	specular = specAmount * dirSpecularLight;
 
-	return ((diffuse * (1.0f - shadow) + directAmbient) + texture(specSamp, texCoord).g * specular * (1.0f - shadow)) * vec4(directLightCol, 1.0f); }
+	return ((diffuse * (1.0f - shadow) + directAmbient) + (1.0 - texture(specSamp, texCoord).g) * specular * (1.0f - shadow)) * vec4(directLightCol, 1.0f); }
 	else{ return ((diffuse * (1.0f - shadow) + directAmbient)) * vec4(directLightCol, 1.0f); }
 }
 
@@ -234,7 +235,7 @@ vec4 pointLight(int iteration, sampler2D specSamp){
 		float specAmount = pow(max(dot(normal, halfwayVec), 0.1f), 16);
 		specular = specAmount * specularLight;
 
-		finalColour = finalColour + ((diffuse * inten + 0.0f) + texture(specSamp, texCoord).g * specular * inten) * vec4(Lights[iteration].colour, 1.0 ) * inten;
+		finalColour = finalColour + ((diffuse * inten + 0.0f) + (1.0 - texture(specSamp, texCoord).g) * specular * inten) * vec4(Lights[iteration].colour, 1.0 ) * inten;
 	}
 	else{
 		finalColour = finalColour + ( (diffuse * inten + 0.0f) * vec4(Lights[iteration].colour, 1.0) * inten);
@@ -277,7 +278,7 @@ vec4 spotLight(int iteration, sampler2D specSamp){
 	float specAmount = pow(max(dot(normal, halfwayVec), 0.0f), 16);
 	specular = specAmount * specularLight;
 
-	finalColour = finalColour + ((diffuse * inten + 0.0f) + texture(specSamp, texCoord).g * specular * inten) * vec4(Lights[iteration].colour, 1.0) * inten;
+	finalColour = finalColour + ((diffuse * inten + 0.0f) + ( 1.0 - texture(specSamp, texCoord).g) * specular * inten) * vec4(Lights[iteration].colour, 1.0) * inten;
 
 	}
 	else{
@@ -622,7 +623,7 @@ void main(){
 	//vec4 final = vec4(finalRGB, 1.0f);
 
 	// albedo * gi + spec + em
-	vec4 final = albedo * vec4(gi, 1.0f) + vec4(reflections, 1.0f) + vec4(emission,1.0f);
+	vec4 final = albedo * vec4(gi, 1.0f) + vec4(reflections, 1.0f) + vec4(emission  * emissionPowerFactor,1.0f);
 
 	//vec4 final = vec4(totalDiffuse, 1.0) * vec4(gi, 1.0f) + vec4(specular, 1.0f);
 

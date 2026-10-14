@@ -62,12 +62,13 @@ class Mesh {
 	bool created = false;
 	bool HasBones = false;
 	float transitionDistance = 5.0f;
-	
+
 	// exposed for threadding
 	void setupMesh();
 	
 	std::vector<accelerate::leaf> blas;
 	Collision::rubiksCubePoints meshAabbPoints;
+
     
 private:
 

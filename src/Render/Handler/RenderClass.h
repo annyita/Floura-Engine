@@ -11,9 +11,15 @@
 #include "Render/Object/texture3D.h"
 #include <glad/gl.h>
 
-class RenderClass
-{
+class RenderClass{
 public:
+	
+	// resolution quality settings
+	static constexpr float resUltraQuality			= 0.770f;
+	static constexpr float resQuality					= 0.667f;
+	static constexpr float resBalanced				= 0.588f;
+	static constexpr float resPerformance			= 0.500f;
+	static constexpr float resUltraPerformance	= 0.333f;
 
 	// billboard
 	static Shader taaShader;

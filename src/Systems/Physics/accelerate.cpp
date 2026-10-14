@@ -23,7 +23,7 @@ void accelerate::uniformSplitEmptySpace(std::vector<Collision::AABB>& aabbs, glm
 void accelerate::transformClips(glm::vec3 p, std::vector<clipmapLevel>& clips){
     for (int i = 0; i < clips.size(); ++i){
         glm::vec3 np = p;
-        np = FE_Math::snapToGrid(np, clips[i].ps.w);
+        np = FE_Math::snapToGrid(np, clips[i].ps.w * 0.5);
         if (glm::vec3(clips[i].ps) != np){
             // dirty
             clips[i].ps = glm::vec4(np, clips[i].ps.w);

@@ -7,9 +7,12 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z =8) in;
 //layout(rgba32f, binding = 0) uniform image3D outGDF;
-layout(rgba16f, binding = 0) uniform image3D outGDF;
-//layout(r8_snorm, binding = 0) uniform image3D outGDF;
+//layout(rgba16f, binding = 0) uniform image3D outGDF;
+layout(r16f, binding = 0) uniform image3D outGDF;
+//layout(rgba8_snorm, binding = 0) uniform image3D outGDF;
 layout(rgba8, binding = 1) uniform image3D outALB;
+layout(r11f_g11f_b10f, binding = 2) uniform image3D outEM;
+layout(rg8, binding = 3) uniform image3D outRM;
 
 struct MDF{
     vec4 position;  // uv.x
@@ -22,21 +25,27 @@ struct MDF{
     mat4 globalTransform;
 
     uint64_t instanceUUID;
-    sampler3D SDF_Handle;
-    sampler3D ALB_Handle;
-    uint64_t padding;
-
-    //sampler2D texture_diffuse_Handle;
-    //sampler2D texture_roughness_Handle;
-    //sampler2D texture_normal_Handle;
-    //sampler2D texture_emission_Handle;
+    sampler3D SDF_Handle; //sampler3D
+    sampler3D UV_Handle;
+    sampler2D ALB_Handle;
+    sampler2D EM_Handle;
+    sampler2D ARM_Handle;
+    
+    vec4 extraFactors; // r = emission power
+    vec4 extraFactors2;
 };
+
+//sampler2D texture_diffuse_Handle;
+//sampler2D texture_roughness_Handle;
+//sampler2D texture_normal_Handle;
+//sampler2D texture_emission_Handle;
 
 // mesh distance fields
 layout(std430, binding = 11) buffer MDF_Buffer {
     MDF MDFS[];
 };
 
+uniform int GDFIndex;
 uniform ivec3 volumeSize;
 uniform vec4 positionScale;
 
@@ -44,11 +53,16 @@ bool intersectAABB(vec3 pA, vec3 sA, vec3 pB, vec3 sB){
     vec3 halfA = sA * 0.5;
     vec3 halfB = sB * 0.5;
     
-    vec3 diff = abs(pA - pA);
+    vec3 diff = abs(pA - pB);
     
     vec3 minDist = halfA + halfB;
     
     return all(lessThan(diff, minDist));
+}
+
+float sdBox(vec3 p, vec3 b){
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0f);
 }
 
 float texture3DSDF(vec3 p, vec3 s, sampler3D handle){
@@ -80,23 +94,6 @@ vec4 texture3DSDFUVW(vec3 p, vec3 s, sampler3D handle){
 
     return vec4(SDF, uvw);
 }
-
-vec4 texture3DSDFrgba(vec3 p, vec3 s, sampler3D handle, sampler3D handleALB){
-    vec3 distance = abs(p) - s;
-
-    float outsideDistance = length(max(distance, 0.0));
-
-    // map coords to 3d uv space
-    vec3 uvw = (p / (s* 2.0)) + 0.5;
-
-    vec4 SDF = textureLod(handle, uvw, 0);
-    vec4 albedo = textureLod(handleALB, uvw, 0);
-
-    if (outsideDistance > 0.0) return vec4(SDF.x + outsideDistance, albedo.rgb);
-
-    return SDF;
-}
-
 
 vec3 texture3DSDFUV(vec3 p, vec3 s, sampler3D handle){
     vec3 distance = abs(p) - s;
@@ -138,14 +135,6 @@ vec3 SDFMesh(vec3 p, MDF cMDF){
     return vec3(nsdfv.r, uv);
 }
 
-vec4 SDFMeshRGB(vec3 p, MDF cMDF){
-    vec3 gp = p - cMDF.gPosition.xyz;
-    vec3 fp = transformP(gp, cMDF.globalTransform);
-
-    vec4 nsdfv = texture3DSDFrgba(fp,cMDF.gExtents.rgb, cMDF.SDF_Handle, cMDF.ALB_Handle);
-
-    return vec4(nsdfv);
-}
 vec4 SDFMeshUVW(vec3 p, MDF cMDF){
     vec3 gp = p - cMDF.gPosition.xyz;
     vec3 fp = transformP(gp, cMDF.globalTransform);
@@ -191,15 +180,24 @@ void main() {
     //vec3 normalizedUVW = (vec3(uvw) ) / vec3(volumeSize);
     vec3 localPos = normalizedUVW - vec3(0.5f);
     vec3 wp = positionScale.xyz + (localPos * vec3(positionScale.w * 2.0));
-
+    
     //wp *= 0.5;
     int ind = 0;
     vec4 duvw = scene(wp, 0.1, ind);
-    vec4 albedo = texture(MDFS[ind].ALB_Handle, duvw.yzw);
-    vec3 EM = texture(MDFS[ind].SDF_Handle, duvw.yzw).yzw;
+
+    MDF CDF = MDFS[ind];
     
-    vec4 final = vec4(duvw.r, EM.rgb);
+    vec2 realuv = texture(CDF.UV_Handle, duvw.yzw).rg * vec2(CDF.position.w, CDF.extents.w);
+    vec4 albedo = texture(CDF.ALB_Handle, realuv);
+    vec4 EM = vec4(texture(CDF.EM_Handle, realuv).rgb * CDF.extraFactors.r, 1.0);
+    vec2 RM = texture(CDF.ARM_Handle, realuv).yz;
+    //vec4 EM = vec4(0.0);
+    
+    //vec4 final = vec4(duvw.r, EM.rgb);
     // capture distance and store it
-    imageStore(outGDF, uvw, final);
+    //imageStore(outGDF, uvw, final);
+    imageStore(outGDF, uvw, duvw);
     imageStore(outALB, uvw, albedo);
+    imageStore(outEM, uvw, EM);
+    imageStore(outRM, uvw, vec4(RM, 0.0, 0.0));
 }

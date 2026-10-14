@@ -7,8 +7,7 @@ layout(local_size_x = 8, local_size_y = 4, local_size_z = 1) in;
 layout(binding = 0, rgba16f) writeonly uniform image2D oindirect;
 layout(binding = 1, rgba8) writeonly uniform image2D ospecular; 
 layout(binding = 2, rgba16f) writeonly uniform image2D oemission;
-layout(binding = 3, rgba16f) writeonly uniform image2D oindirectSpecular;
-layout(binding = 4, rgba16f) writeonly uniform image2D oemissionSpecular;
+layout(binding = 3, rgba16f) writeonly uniform image2D oemissionSpecular;
 
 #define INF 3.40282347e+38f
 
@@ -1016,7 +1015,6 @@ void main() {
 
         imageStore(oindirect, pixelCoords, nNIC.indirect);
         imageStore(oemission, pixelCoords, nNIC.emission);
-        imageStore(oindirectSpecular, pixelCoords, nNIC.idirectSpecular);
         imageStore(oemissionSpecular, pixelCoords, nNIC.emissionSpecular);
 
         return;
@@ -1024,7 +1022,6 @@ void main() {
 
     imageStore(oindirect, pixelCoords, nIC.indirect);
     imageStore(oemission, pixelCoords, nIC.emission);
-    imageStore(oindirectSpecular, pixelCoords, nIC.idirectSpecular);
     imageStore(oemissionSpecular, pixelCoords, nIC.emissionSpecular);
     
     /*

@@ -214,18 +214,15 @@ void main() {
     //vec3 tonemappedColour = vec3(1.0f) - exp(-colour  * autoExposure);
 
     //vec3 tonemappedColour = vec3(1.0f) - exp(-colour  * 5.0);
-
-    vec3 aces = ACESFilm(colour * autoExposure * 1.8);
     //vec3 aces = ACESFilm(colour * 1.0 * 1.8);
-    
+    //vec3 aces = ACESFilm(colour * autoExposure * 1.8);
 
     // hint of saturation
     //aces = vec3(saturationMatrix(1.5) * vec4(aces,1.0));
 
     //aces = filmgrain(aces, 0.1, accum24value);
-    FragColor.rgb = pow(aces, vec3(gamma)); // aces
+    FragColor.rgb = pow(ACESFilm(colour * autoExposure * 1.8), vec3(gamma)); // aces
     //FragColor.rgb = pow(colour, vec3(gamma)); // off
-
     /*
     vec3 lutSize = vec3(textureSize(LUT, 0));
     vec3 uvw = (colour.rgb * float(lutSize - 1.0) + 0.5) / lutSize;

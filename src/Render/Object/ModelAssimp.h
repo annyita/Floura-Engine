@@ -94,6 +94,7 @@ public:
 	std::vector<Collision::AABB> mdfNodes;
 	std::vector<Texture3D *> meshSDFs;
 	std::vector<Texture3D *> meshSDFs2;
+	//std::vector<Texture3D *> meshSDFs3;
 	std::vector<Mesh> meshes;
 	std::vector<Collision::rubiksCubePoints> meshAabbPoints;
 

@@ -1,6 +1,6 @@
 [
     {
-        "DefaultSkyboxPath": "temp/sb/galaxy/Skybox.json",
+        "DefaultSkyboxPath": "Assets/Skybox/skyLOGL/Skybox.json",
         "DirAmbient": 0.0,
         "DirColour": [
             1.0,

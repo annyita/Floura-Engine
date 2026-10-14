@@ -1,7 +1,7 @@
 [
     {
-        "DefaultSkyboxPath": "Assets/Skybox/skyLOGL/Skybox.json",
-        "DirAmbient": 0.10000000149011612,
+        "DefaultSkyboxPath": "Assets/Skybox/ferndale_studio_04/Skybox.json",
+        "DirAmbient": 0.0,
         "DirColour": [
             1.0,
             1.0,
@@ -9,11 +9,11 @@
         ],
         "DirEnabled": true,
         "DirRotation": [
-            90.5999984741211,
-            1052.699951171875,
+            131.38400268554688,
+            90.0,
             0.0
         ],
-        "DirSMMaxBias": 4.000999927520752,
+        "DirSMMaxBias": 0.003000000026077032,
         "DirSpecEnabled": true,
         "DirSpecular": 5.0,
         "DoShadowMap": true,

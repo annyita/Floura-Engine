@@ -550,5 +550,23 @@
         "ObjectType": "Material",
         "Path": "Assets/Material/ForwardAnimationWeightDBG.Material",
         "Type": "NULL"
+    },
+    {
+        "Name": "suntemplescene",
+        "ObjectType": "Model",
+        "Path": "temp/suntemplescene/asset/SunTemple/SunTemple.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "rtgiDemoScene",
+        "ObjectType": "Model",
+        "Path": "temp/rtgiDemoScene.gltf/rtgiDemoScene.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "emtest",
+        "ObjectType": "Model",
+        "Path": "temp/emtest.glb",
+        "Type": "NULL"
     }
 ]

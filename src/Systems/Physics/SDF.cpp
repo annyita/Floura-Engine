@@ -79,11 +79,15 @@ void flouraSDF::bakeMeshDistanceFieldGPU(std::vector<Vertex> &vertices, std::vec
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // Unbind
 	
 
-	texture.Delete(); texture.createImage3D(sliceSize,sliceSize,sliceSize, "SDF", slot, GL_RGBA16F); // GL_RGBA32F GL_R8_SNORM GL_RGBA16F
-	talbedo.Delete(); talbedo.createImage3D(sliceSize,sliceSize,sliceSize, "SDF", slot + 1, GL_RGBA8);
+	//talbedo.filtering = GL_NEAREST; 
+	// texture.filtering = GL_NEAREST;
+	texture.Delete(); texture.createImage3D(sliceSize,sliceSize,sliceSize, "SDF", slot, GL_R16F); // GL_RGBA32F GL_R8_SNORM GL_RGBA16F GL_R16F
+	talbedo.Delete(); talbedo.filtering = GL_NEAREST; talbedo.createImage3D(sliceSize,sliceSize,sliceSize, "SDF", slot + 1, GL_RG16F);
+	//temission.Delete(); temission.filtering = GL_NEAREST; temission.createImage3D(sliceSize,sliceSize,sliceSize, "SDF", slot + 2, GL_R11F_G11F_B10F);
 	/**/
-	glBindImageTexture(0, texture.ID, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA16F); // GL_RGBA32F GL_R8_SNORM
-	glBindImageTexture(1, talbedo.ID, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
+	glBindImageTexture(0, texture.ID, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R16F); // GL_RGBA32F GL_R8_SNORM
+	glBindImageTexture(1, talbedo.ID, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RG16F);
+	//glBindImageTexture(2, temission.ID, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R11F_G11F_B10F);
 	mdfCompute.Activate();
 	mdfCompute.setInt3("volumeSize", texture.width,texture.height,texture.depth);
 	mdfCompute.setFloat3("ivScale", root.size);
@@ -91,6 +95,7 @@ void flouraSDF::bakeMeshDistanceFieldGPU(std::vector<Vertex> &vertices, std::vec
 	mdfCompute.setFloat("thickness", thickness);
 	mdfCompute.setBool("accumulateMode", false);
 	
+	/*
 	for (unsigned int x = 0; x < textures.size(); x++){
 		if (textures[x].type == "texture_diffuse"){
 			mdfCompute.setHandleui64ARB("AlbedoHandle", textures[x].handle); 
@@ -101,6 +106,7 @@ void flouraSDF::bakeMeshDistanceFieldGPU(std::vector<Vertex> &vertices, std::vec
 			continue;    
 		}
 	}
+	*/
 	
 	glDispatchCompute((texture.width + 7) / 8, (texture.height + 7) / 8, ((texture.depth + 7) / 8));
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
@@ -117,7 +123,7 @@ void flouraSDF::bakeMeshDistanceFieldGPU(std::vector<Vertex> &vertices, std::vec
 
 void flouraSDF::bakeMeshDistanceFieldGridGPU(std::vector<Vertex>& vertices,
 	std::vector<accelerate::BVH_primitive>& prims, Collision::AABB root, const int sliceSize, Texture3D& texture,
-	Texture3D& talbedo, GLuint slot, float thickness, std::vector<Texture>& textures, bool isnotFirst)
+	Texture3D& tUV, GLuint slot, float thickness, std::vector<Texture>& textures, bool isnotFirst)
 {
 	// yeah i know, tons of wasted empty components, idc tho
 	struct triangle{
@@ -170,15 +176,15 @@ void flouraSDF::bakeMeshDistanceFieldGridGPU(std::vector<Vertex>& vertices,
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // Unbind
 	
 	if (!isnotFirst){
-		texture.Delete(); 
-		texture.createImage3D(sliceSize,sliceSize,sliceSize, "SDF", slot, GL_RGBA16F); // GL_RGBA32F GL_R8_SNORM GL_RGBA16F
-		talbedo.Delete(); 
-		talbedo.createImage3D(sliceSize,sliceSize,sliceSize, "SDF", slot + 1, GL_RGBA8);
+		texture.Delete(); texture.createImage3D(sliceSize,sliceSize,sliceSize, "SDF", slot, GL_R16F); // GL_RGBA32F GL_R8_SNORM GL_RGBA16F
+		tUV.Delete(); tUV.createImage3D(sliceSize,sliceSize,sliceSize, "SDF", slot + 1, GL_RG16F); // GL_RGBA8
+		//temission.Delete(); temission.createImage3D(sliceSize,sliceSize,sliceSize, "SDF", slot + 2, GL_R11F_G11F_B10F);
 	}
 	
-	/**/
-	glBindImageTexture(0, texture.ID, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA16F); // GL_RGBA32F GL_R8_SNORM
-	glBindImageTexture(1, talbedo.ID, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
+	/**/ 
+	glBindImageTexture(0, texture.ID, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R16F); // GL_RGBA32F GL_R8_SNORM
+	glBindImageTexture(1, tUV.ID, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RG16F);
+	//glBindImageTexture(2, temission.ID, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R11F_G11F_B10F);
 	mdfCompute.Activate();
 	mdfCompute.setInt3("volumeSize", texture.width,texture.height,texture.depth);
 	mdfCompute.setFloat3("ivScale", root.size);
@@ -186,6 +192,7 @@ void flouraSDF::bakeMeshDistanceFieldGridGPU(std::vector<Vertex>& vertices,
 	mdfCompute.setFloat("thickness", thickness);
 	mdfCompute.setBool("accumulateMode", isnotFirst);
 
+	/*
 	for (unsigned int x = 0; x < textures.size(); x++){
 		if (textures[x].type == "texture_diffuse"){
 			mdfCompute.setHandleui64ARB("AlbedoHandle", textures[x].handle); 
@@ -196,6 +203,7 @@ void flouraSDF::bakeMeshDistanceFieldGridGPU(std::vector<Vertex>& vertices,
 			continue;    
 		}
 	}
+	*/
 	
 	glDispatchCompute((texture.width + 7) / 8, (texture.height + 7) / 8, ((texture.depth + 7) / 8));
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);

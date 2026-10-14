@@ -239,8 +239,7 @@ float shadowTrace(vec3 lightDirection, vec3 normal, vec3 iPosition){
     return shadow;
 }
 
-vec4 direcLight(vec3 ARM, vec3 iNormal, vec3 iPosition)
-{ // normals need to be recalculated based on rotation
+vec4 direcLight(vec3 ARM, vec3 iNormal, vec3 iPosition){ // normals need to be recalculated based on rotation
     
   // shadow map 
   float shadow = 0.0f;
@@ -253,8 +252,7 @@ vec4 direcLight(vec3 ARM, vec3 iNormal, vec3 iPosition)
     vec4 fragPosLight = lightProjection * vec4(iPosition, 1.0f);
     float smShadow = 0.0;
     float ssShadow = 0.0f;
-  if (doDirShadowMap)
-  {
+  if (doDirShadowMap){
       smShadow = CalcShadowFactorDIR(fragPosLight, lightDirection, normal, iPosition);
       
   }
@@ -284,7 +282,7 @@ vec4 direcLight(vec3 ARM, vec3 iNormal, vec3 iPosition)
    //   return ((diffuse * (1.0f - shadow)) + ARM.g* specular * (1.0f - shadow)) * vec4(directLightCol, 1.0f); }
   //else{ return ((diffuse * (1.0f - shadow))) * vec4(directLightCol, 1.0f); }
     
-      return ((diffuse * (1.0f - shadow) + directAmbient) + ARM.g* specular * (1.0f - shadow)) * vec4(directLightCol, 1.0f); }
+      return ((diffuse * (1.0f - shadow) + directAmbient) +  (1.0 - ARM.g) * specular * (1.0f - shadow)) * vec4(directLightCol, 1.0f); }
   else{ return ((diffuse * (1.0f - shadow) + directAmbient)) * vec4(directLightCol, 1.0f); }
 }
 
@@ -324,7 +322,7 @@ vec4 pointLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition){
         float specAmount = pow(max(dot(normal, halfwayVec), 0.1f), 16);
         specular = specAmount * specularLight;
 
-        finalColour = finalColour + ((diffuse * (1.0f - shadow)* inten + 0.0f) +ARM.b * specular * (1.0f - shadow)* inten) * vec4(Lights[iteration].colour, 1.0 ) * inten;
+        finalColour = finalColour + ((diffuse * (1.0f - shadow)* inten + 0.0f) + (1.0 - ARM.g) * specular * (1.0f - shadow)* inten) * vec4(Lights[iteration].colour, 1.0 ) * inten;
     }
     else{
         finalColour = finalColour + ( (diffuse * (1.0f - shadow) * inten + 0.0f) * vec4(Lights[iteration].colour, 1.0) * inten);
@@ -371,7 +369,7 @@ vec4 spotLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition){
         float specAmount = pow(max(dot(normal, halfwayVec), 0.0f), 16);
         specular = specAmount * specularLight;
 
-        finalColour = finalColour + ((diffuse * (1.0f - shadow) * inten + 0.0f) + ARM.b * specular * (1.0f - shadow) * inten) * vec4(Lights[iteration].colour, 1.0) * inten;
+        finalColour = finalColour + ((diffuse * (1.0f - shadow) * inten + 0.0f) + (1.0 - ARM.g) * specular * (1.0f - shadow) * inten) * vec4(Lights[iteration].colour, 1.0) * inten;
 
     }
     else{

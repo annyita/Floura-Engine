@@ -280,5 +280,23 @@
         "ObjectType": "Model",
         "Path": "Assets/Models/METALROUGHTEST/WALL2.gltf",
         "Type": "NULL"
+    },
+    {
+        "Name": "terrain",
+        "ObjectType": "Model",
+        "Path": "temp/dirtroad/terrain.model",
+        "Type": "NULL"
+    },
+    {
+        "Name": "foliage",
+        "ObjectType": "Model",
+        "Path": "temp/dirtroad/foliage.model",
+        "Type": "NULL"
+    },
+    {
+        "Name": "tree",
+        "ObjectType": "Model",
+        "Path": "temp/dirtroad/tree.model",
+        "Type": "NULL"
     }
 ]

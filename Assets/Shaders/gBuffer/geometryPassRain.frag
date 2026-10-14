@@ -28,6 +28,7 @@ uniform uint64_t texture_diffuse_Handle;
 uniform uint64_t texture_roughness_Handle;
 uniform uint64_t texture_normal_Handle;
 uniform uint64_t texture_emission_Handle;
+uniform float emissionPowerFactor;
 //uniform sampler2D noiseMapTexture;
 
 uniform uint64_t BlueNoiseHandle;
@@ -87,12 +88,11 @@ void blueNoiseOpacity(float Threshold){ // for fade out or opacity (cheap) (coul
 	//int nFrame = frame + drawIndex + meshIndex;
 	int nFrame = totalDrawCount;
 	if (animateBinaryAlpha)  nFrame += frame;
+	
 	vec2 offset = vec2(fract(nFrame * 0.618), fract(nFrame * 0.133));
 	vec2 noiseUV = (gl_FragCoord.xy / texSize) + offset;
-
 	
-	float noise = texture(bluemap, noiseUV).r;
-	
+	float noise = texture(bluemap, noiseUV)[frame % 4];
 	
 	// normal ranges should be 0.0f-1.0f;
 	if (noise > Threshold) discard;
@@ -200,6 +200,6 @@ void main(){
 	
 	
 	vec3 emission = texture(sampler2D(texture_emission_Handle), texCoord).rgb;
-	gEmission = emission;
+	gEmission = emission * emissionPowerFactor;
 	//gEmission
 }

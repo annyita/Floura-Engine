@@ -83,21 +83,18 @@ void entity::LoadMaterial(std::string path){
 	component.systems.material.Material.LoadMaterial(path);
 }
 
-void entity::addScript(std::string path, std::string name)
-{
+void entity::addScript(std::string path, std::string name){
 	ScriptObject* newScript = new ScriptObject(name);
 	newScript->loadScript(path);
 	ScriptObjects.push_back(newScript);
 	initEntityTables(ScriptObjects.back());
 }
 
-void entity::reloadScript(int index)
-{
+void entity::reloadScript(int index){
 	ScriptObjects[index]->loadScript(ScriptObjects[index]->path);
 }
 
-void entity::removeScript(int index)
-{
+void entity::removeScript(int index){
 	if (index < ScriptObjects.size()) {
 		delete ScriptObjects[index];
 		ScriptObjects.erase(ScriptObjects.begin() + index);
@@ -107,10 +104,8 @@ void entity::removeScript(int index)
 void entity::updateScripts()
 {
 	// update function
-	for (size_t i = 0; i < ScriptObjects.size(); i++)
-	{
-		if (Player::playstate == 1)
-		{
+	for (size_t i = 0; i < ScriptObjects.size(); i++){
+		if (Player::playstate == 1){
 			sendEntityUniformsToScripts(ScriptObjects[i]);
 			ScriptObjects[i]->scriptUpdate();
 			// any other functions go here
@@ -119,26 +114,21 @@ void entity::updateScripts()
 	}
 }
 
-void entity::initScript(int index)
-{
-	if (Player::playstate == 1)
-	{
+void entity::initScript(int index){
+	if (Player::playstate == 1){
 		ScriptObjects[index]->didInit = false;
 	}
 }
 
-void entity::update()
-{
+void entity::update(){
 	//pollPositionUpdates();
 	
 	
 	updateMeshAABBs();
 
 	// update mesh positions here vv
-	switch (type)
-	{
-	case ENT_MODEL_TYPE: // model
-	{
+	switch (type){
+	case ENT_MODEL_TYPE: {// model
 		int index = RenderHandler::fetchModelIndex(component.render.renderID);
 		if (index != -1){
 			RenderHandler::models[index].model->updatePosition(component.systems.transformation.position);
@@ -153,6 +143,7 @@ void entity::update()
 			if (raytracer::RTGlobalTransformFlag){ // all of these are wasteful, make sure to look into these
 				//raytracer::updateboundingboxes(component.render.instanceUUID, component.collider.rootnodes);
 				//raytracer::modelMatrixUpdate(component.render.instanceUUID, RenderHandler::models[index].model->gModelMatrix);
+				FlouraSWRT::updateUVscale(component.render.instanceUUID, component.systems.material.uvScale);
 				FlouraSWRT::updateGlobalTransformation(component.render.instanceUUID, RenderHandler::models[index].model->gModelMatrix, component.systems.transformation.rotation);
 			}
 		}
@@ -201,8 +192,7 @@ void entity::updatePhysicsDynamics(float deltatime){
 	}
 }
 
-void entity::Delete()
-{
+void entity::Delete(){
 	// right now logic (raise flags, queue for the deletion event (lock physics thread etc) )
 	queuedForDeletion = true;
 	Scene::entityDeletionUnderGoing = true;
@@ -228,6 +218,8 @@ void entity::queuedDeletion(){
 			//delete component.renderHeads.Model;
 			//component.renderHeads.Model = nullptr;
 			component.systems.material.Material.ClearMaterial();
+			
+			FlouraSWRT::dirtyGDF = true;
 			break;
 		}
 	case ENT_BILLBOARD_TYPE: // billboard

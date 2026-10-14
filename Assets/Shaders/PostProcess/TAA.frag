@@ -77,8 +77,9 @@ void main(){
     vec3 previousColour = texture(hColour, historyTexCoord).rgb;
     vec3 previousColourClamped = colourClamp(1, previousColour);
 
-    
+
+    //vec3 accumulated = mix(vec3(screen), previousColourClamped, 0.98);
     vec3 accumulated = mix(vec3(screen), previousColourClamped, blend);
-    //vec3 accumulated = mix(vec3(screen), previousColour, 0.95); // accumulation for testing
+    //vec3 accumulated = mix(vec3(screen), previousColour, 0.90); // accumulation for testing
     FragColor = vec4(accumulated, 1.0);
 }

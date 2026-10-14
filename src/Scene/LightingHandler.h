@@ -66,7 +66,7 @@ public:
 	
 	static void update();
 	
-	static void createLight();
+	static void createLight(glm::vec3 p);
 
 	static void deleteLight(int index);
 

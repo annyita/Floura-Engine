@@ -18,8 +18,7 @@ void Mesh::create(std::vector<Vertex>& vertices, std::vector<GLuint>& indices, s
     if (indices.empty()) LogConsole::print("mesh.cpp indices are empty");
     if (textures.empty()) LogConsole::print("mesh.cpp textures are empty");
 
-    if (vertices.empty() && indices.empty())
-    {
+    if (vertices.empty() && indices.empty()){
         LogConsole::print("mesh.cpp vertices are empty");
         return; // avoid passing on cause will cause issues
     }
@@ -36,8 +35,7 @@ void Mesh::createWithoutTexture(std::vector<Vertex>& vertices, std::vector<GLuin
     if (vertices.empty()) LogConsole::print("mesh.cpp Vertices are empty");
     if (indices.empty())LogConsole::print("mesh.cpp indices are empty");
     
-    if (vertices.empty() && indices.empty())
-    {
+    if (vertices.empty() && indices.empty()){
         LogConsole::print("mesh.cpp vertices are empty");
         return; // avoid passing on cause will cause issues
     }
@@ -61,14 +59,20 @@ void Mesh::bindMaterial(Shader& shader){
     for (unsigned int i = 0; i < textures.size(); i++){
         std::string num;
         std::string type = textures[i].type;
+        shader.Activate(); 
+        
         if (type == "texture_diffuse") {num = std::to_string(numDiffuse++);}
         else if (type == "texture_roughness") {num = std::to_string(numSpecular++);}
         else if (type == "texture_normal") {num = std::to_string(numNormal++);}
-        else if (type == "texture_emission") {num = std::to_string(numEmissive++);}
-        shader.Activate(); 
+        else if (type == "texture_emission"){
+            num = std::to_string(numEmissive++);
+            shader.setFloat("emissionPowerFactor", textures[i].powerFactor);
+            
+        }
         shader.setHandleui64ARB((type + "_Handle").c_str(), textures[i].handle);
         textures[i].texUnit(shader, (type).c_str(), textures[i].unit);
         textures[i].Bind();
+        //shader.Activate();
     }
 }
 

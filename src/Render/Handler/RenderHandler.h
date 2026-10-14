@@ -15,16 +15,14 @@ class RenderHandler
 {
 public:
 
-	struct modelObject
-	{
+	struct modelObject{
 		uint64_t RenderID;
 		Model* model;
 		int instances;
 		std::string path;
 	};
 
-	struct renderQueueData
-	{
+	struct renderQueueData{
 		uint64_t RenderID;
 		uint64_t instanceUUID;
 		uint64_t shaderUUID;

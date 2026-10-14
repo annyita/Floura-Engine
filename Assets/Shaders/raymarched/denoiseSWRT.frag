@@ -3,30 +3,23 @@
 //out vec4 FragColor;
 in highp vec2 texCoord;
 
-layout(location = 0) out vec3 presentImage;
 // denoise buffer
-layout(location = 1) out vec4 dindirect;
-layout(location = 2) out vec4 dEmission;
-//layout(location = 3) out vec4 dIndirectSpecular;
-//layout(location = 4) out vec4 dEmissionSpecular;
+layout(location = 0) out vec4 dindirect;
+//layout(location = 1) out vec4 dEmission;
 
 uniform sampler2D swrtSpecular;
 
-uniform sampler2D gEmission;
 uniform sampler2D gNormal;
 uniform sampler2D depthMap;
-uniform sampler2D gSpecular;
+//uniform sampler2D gSpecular;
 uniform sampler2D gPosition;
 
 uniform sampler2D swrtIndirect;
 uniform sampler2D swrtEmission;
-uniform sampler2D swrtIndirectSpecular;
-uniform sampler2D swrtEmissionSpecular;
 uniform sampler2D filteredVariance;
 
 uniform int denoiseRadius;
 uniform bool doDenoise;
-uniform bool doDenoiseSplitDBGView;
 
 uniform float NearPlane;
 uniform float FarPlane;
@@ -108,55 +101,34 @@ vec4 indirectWaveletDenoise(sampler2D inputSampler, sampler2D variance, int chan
 void main(){
     float gdepth                 = texture2D(depthMap, texCoord).r;
     if (gdepth >= 0.99999) discard;
-
+    
     vec4 indirect                = texture(swrtIndirect, texCoord);
     vec4 emission              = texture(swrtEmission, texCoord);
-    vec3 indirectSpecular   = texture(swrtIndirectSpecular, texCoord).rgb;
-    vec3 emissionSpecular = texture(swrtEmissionSpecular, texCoord).rgb;
     vec3 specular               = texture(swrtSpecular, texCoord).rgb;
-    
-    vec3 gemission  = texture(gEmission, texCoord).rgb;
     vec3 gnrm         = normalize(texture(gNormal, texCoord).rgb); // move into do denoise
-    vec3 gSpecular   = texture(gSpecular, texCoord).rgb;
     
     vec4 nIndirect                = indirect;
     vec4 nEmission              = emission;
-
-    vec2 lscreenSize = textureSize(swrtIndirect, 0);
-    bool split = true;
-    if (texCoord.x > lscreenSize.x / 2 && doDenoiseSplitDBGView) split = false;
     
-    if (doDenoise && split){
+    if (doDenoise){
         vec3 gp = texture(gPosition, texCoord).rgb;
         if (passIndex == 0){ // first pass
             nIndirect = indirectWaveletDenoise(swrtIndirect, filteredVariance, 0, indirect.rgb, gp, gnrm, FarPlane);
-            nEmission = indirectWaveletDenoise(swrtEmission, filteredVariance, 1, emission.rgb, gp, gnrm, FarPlane);
+            //nEmission = indirectWaveletDenoise(swrtEmission, filteredVariance, 1, emission.rgb, gp, gnrm, FarPlane);
         }
         else{ // secondary (reads off pingpong)
             nIndirect = indirectWaveletDenoise(swrtIndirect, swrtIndirect, 3, indirect.rgb, gp, gnrm, FarPlane);
-            nEmission = indirectWaveletDenoise(swrtEmission, swrtEmission, 3, emission.rgb, gp, gnrm, FarPlane);
+            //nEmission = indirectWaveletDenoise(swrtEmission, swrtEmission, 3, emission.rgb, gp, gnrm, FarPlane);
         }
     }
 
     // write into d buffer
     dindirect = nIndirect;
-    dEmission = nEmission;
+    //dEmission = nEmission;
     
     if (passNum != passIndex + 1) return;
     //vec3 gi = direct.rgb + nIndirect.rgb;
     // nSpecular - indirectSpecular < i currently am passing specualr thru here temporarily 
     // needs to be seperated into two
-    presentImage = clamp(specular, 0.0, 1.0);
-    dEmission.rgb = (nEmission.rgb + emissionSpecular + gemission);
-
-    //vec3 combine = nIndirect.rgb + (nEmission.rgb + emissionSpecular + gemission);
-    
-    //FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-    //FragColor = vec4(gi, 1.0f);
-    //presentImage = direct.rgb;
-    //presentImage = gi;
-    //presentImage = nIndirectSpecular.rgb;
-    //presentImage = combine.rgb;
-    //presentImage = nIndirect.rgb;
-    //presentImage = nIndirectSpecular.rgb;
+    //dEmission.rgb = nEmission.rgb; // gemission
 }

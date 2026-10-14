@@ -92,11 +92,6 @@ void LightingHandler::setupShadowMapBuffer() {
 
 }
 
-void drawSM(unsigned int & FBO, unsigned int w, unsigned int h)
-{
-	
-}
-
 void LightingHandler::drawShadowMap(Model*& model, int drawIndex) {
 	if (!doDirShadowMap || framePause) {return;}
 
@@ -234,8 +229,7 @@ void LightingHandler::sendToShader(Shader Shader){
 
 	//DirSMMaxBias
 	Shader.setFloat("doDirShadowMap", doDirShadowMap);
-	if (doDirShadowMap)
-	{
+	if (doDirShadowMap){
 		// shadow map
 		Shader.setFloat("DirSMMaxBias", DirSMMaxBias);
 		Shader.setInt("FilterRadius", dirShadowMapHardness);
@@ -265,10 +259,10 @@ void LightingHandler::update(){
 
 }
 
-void LightingHandler::createLight(){
+void LightingHandler::createLight(glm::vec3 p){
 	Light tempLight;
 	
-	tempLight.position = glm::vec3(0);
+	tempLight.position = p;
 	tempLight.rotation = glm::vec3(0);
 	tempLight.colour = glm::vec3(1);
 	tempLight.radius = 100.0f;
@@ -351,8 +345,7 @@ void LightingHandler::loadScene(std::string path){
 	std::cout << "Loaded Scene LightObject from: " << path << std::endl;
 }
 
-void LightingHandler::saveScene(std::string path)
-{
+void LightingHandler::saveScene(std::string path){
 	try {
 		json lightData = json::array();  // New JSON array to hold model data
 
@@ -400,18 +393,15 @@ void LightingHandler::saveScene(std::string path)
 	}
 }
 
-void LightingHandler::deleteScene()
-{
-	for (size_t i = 0; i < Lights.size(); ++i)
-	{
+void LightingHandler::deleteScene(){
+	for (size_t i = 0; i < Lights.size(); ++i){
 		deleteLight(i);
 		//IdManager::RemoveID(Lights[i].ID);
 	}
 	Lights.clear();
 }
 
-void LightingHandler::cleanup()
-{
+void LightingHandler::cleanup(){
 	// shaders
 	dirShadowMapProgram.Delete();
 	dirShadowMapProgramBB.Delete();

@@ -15,10 +15,14 @@ public:
         glm::vec4 ps; // pos & scale
         uint64_t handle;
         uint64_t handle2;
+        uint64_t handle3;
+        uint64_t handle4;
+        uint64_t handle5;
+        uint64_t handle6;
         float thickness;
-        uint32_t dirty; // bool but 64 for padding
-        float padding0;
-        float padding1;
+        uint32_t dirty; // bool but 32 for padding
+        uint32_t pad;
+        uint32_t pad0;
     };
     
     static void transformClips(glm::vec3 p, std::vector<clipmapLevel>&clips);

@@ -27,7 +27,6 @@
         "name": "plane",
         "parentUUID": "0000000000000000",
         "path": "Assets/Models/basic shapes/plane.gltf",
-        "smoothnessValue": 0.0,
         "uvScale": [
             20.0,
             20.0
@@ -61,7 +60,6 @@
         "name": "slope",
         "parentUUID": "0000000000000000",
         "path": "Assets/Models/basic shapes/slope.gltf",
-        "smoothnessValue": 0.0,
         "uvScale": [
             4.0,
             18.0
@@ -95,7 +93,6 @@
         "name": "slope",
         "parentUUID": "0000000000000000",
         "path": "Assets/Models/basic shapes/slope.gltf",
-        "smoothnessValue": 0.0,
         "uvScale": [
             4.0,
             18.0
@@ -129,7 +126,6 @@
         "name": "cube",
         "parentUUID": "0000000000000000",
         "path": "Assets/Models/basic shapes/cube.gltf",
-        "smoothnessValue": 0.0,
         "uvScale": [
             20.0,
             8.0
@@ -163,7 +159,6 @@
         "name": "slope",
         "parentUUID": "0000000000000000",
         "path": "Assets/Models/basic shapes/slope.gltf",
-        "smoothnessValue": 0.0,
         "uvScale": [
             3.0,
             3.0
@@ -197,7 +192,6 @@
         "name": "cube",
         "parentUUID": "0000000000000000",
         "path": "Assets/Models/basic shapes/cube.gltf",
-        "smoothnessValue": 0.0,
         "uvScale": [
             7.0,
             7.0
@@ -231,7 +225,6 @@
         "name": "cylinder",
         "parentUUID": "0000000000000000",
         "path": "Assets/Models/basic shapes/cylinder.gltf",
-        "smoothnessValue": 0.0,
         "uvScale": [
             2.0,
             7.0
@@ -265,7 +258,6 @@
         "name": "cube",
         "parentUUID": "0000000000000000",
         "path": "Assets/Models/basic shapes/cube.gltf",
-        "smoothnessValue": 0.0,
         "uvScale": [
             18.0,
             10.0
@@ -299,7 +291,6 @@
         "name": "cylinder",
         "parentUUID": "0000000000000000",
         "path": "Assets/Models/basic shapes/cylinder.gltf",
-        "smoothnessValue": 0.0,
         "uvScale": [
             1.0,
             1.0
@@ -333,7 +324,6 @@
         "name": "cube",
         "parentUUID": "0000000000000000",
         "path": "Assets/Models/basic shapes/cube.gltf",
-        "smoothnessValue": 0.0,
         "uvScale": [
             14.0,
             10.0
@@ -367,7 +357,6 @@
         "name": "cube",
         "parentUUID": "0000000000000000",
         "path": "Assets/Models/basic shapes/cube.gltf",
-        "smoothnessValue": 0.0,
         "uvScale": [
             10.0,
             10.0
@@ -376,43 +365,9 @@
     {
         "CastShadow": true,
         "Location": [
-            -36.72347640991211,
-            0.0,
-            0.0
-        ],
-        "MaterialPath": "Assets/Material/Default.Material",
-        "Rotation": [
             0.0,
             0.0,
             0.0
-        ],
-        "Scale": [
-            5.0,
-            5.0,
-            5.0
-        ],
-        "Scripts": [],
-        "UUID": "6770d07ef7e02469",
-        "children": [],
-        "doRender": true,
-        "drawInstanced": false,
-        "hasParent": false,
-        "isBackFaceCulling": false,
-        "name": "cornel",
-        "parentUUID": "0000000000000000",
-        "path": "Assets/Models/cornel/cornel.gltf",
-        "smoothnessValue": 0.0,
-        "uvScale": [
-            1.0,
-            1.0
-        ]
-    },
-    {
-        "CastShadow": true,
-        "Location": [
-            59.70437240600586,
-            -2.946047067642212,
-            13.963876724243164
         ],
         "MaterialPath": "Assets/Material/Default.Material",
         "Rotation": [
@@ -426,50 +381,15 @@
             1.0
         ],
         "Scripts": [],
-        "UUID": "c7d7c6875fe5afd9",
+        "UUID": "7810b204c748d4c0",
         "children": [],
         "doRender": true,
         "drawInstanced": false,
         "hasParent": false,
         "isBackFaceCulling": true,
-        "name": "gitest",
+        "name": "foliage",
         "parentUUID": "0000000000000000",
-        "path": "temp/packasset/raytraced/GItest.gltf",
-        "smoothnessValue": 0.0,
-        "uvScale": [
-            1.0,
-            1.0
-        ]
-    },
-    {
-        "CastShadow": true,
-        "Location": [
-            48.61114501953125,
-            -3.142780303955078,
-            18.312788009643555
-        ],
-        "MaterialPath": "Assets/Material/Default.Material",
-        "Rotation": [
-            0.0,
-            0.0,
-            0.0
-        ],
-        "Scale": [
-            1.0,
-            1.0,
-            1.0
-        ],
-        "Scripts": [],
-        "UUID": "9180c795af2ce712",
-        "children": [],
-        "doRender": true,
-        "drawInstanced": false,
-        "hasParent": false,
-        "isBackFaceCulling": true,
-        "name": "drop_imported",
-        "parentUUID": "0000000000000000",
-        "path": "C:/Users/anon/Pictures/knife/BayonetKnife.gltf",
-        "smoothnessValue": 0.0,
+        "path": "temp/dirtroad/foliage.model",
         "uvScale": [
             1.0,
             1.0

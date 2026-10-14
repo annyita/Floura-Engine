@@ -70,7 +70,7 @@
         "Location": [
             1.8505778312683105,
             -0.1027611494064331,
-            -58.24641418457031
+            -58.4869384765625
         ],
         "MaterialPath": "Assets/Material/Default.Material",
         "Rotation": [
@@ -1050,6 +1050,408 @@
         "name": "doctorrigged",
         "parentUUID": "0000000000000000",
         "path": "temp/Ch16_nonPBR.fbx",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            122.71244812011719,
+            14.93088436126709,
+            -2.8259010314941406
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "14618e897ab8c701",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "GItest",
+        "parentUUID": "0000000000000000",
+        "path": "temp/packasset/raytraced/GItest.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -81.1340560913086,
+            4.174517631530762,
+            56.60654830932617
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "0f6a714aeb357dd1",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "rtgiDemoScene",
+        "parentUUID": "0000000000000000",
+        "path": "temp/rtgiDemoScene.gltf/rtgiDemoScene.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            21.007476806640625,
+            1.9802838563919067,
+            17.435537338256836
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "3283d434d4cbdbe6",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "greenEmission",
+        "parentUUID": "0000000000000000",
+        "path": "temp/emissiveCubes/greenEmission.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            15.088624954223633,
+            3.010315418243408,
+            31.498455047607422
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "abf05eadbbacc5f3",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "emissionCube.model",
+        "parentUUID": "0000000000000000",
+        "path": "Assets/Models/emissionCube.model",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            23.117597579956055,
+            5.641631126403809,
+            30.037569046020508
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "c83d07ec9ac7a221",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "lightbeam",
+        "parentUUID": "0000000000000000",
+        "path": "temp/lightbeam.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            94.99024200439453,
+            6.295251846313477,
+            1.6143156290054321
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "856a10df206a8ee7",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "redEmission",
+        "parentUUID": "0000000000000000",
+        "path": "Assets/Models/emissiveCubes/redEmission.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            5.586512088775635,
+            2.6494381427764893,
+            64.0201416015625
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "487e352873b887da",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "blueEmission",
+        "parentUUID": "0000000000000000",
+        "path": "Assets/Models/emissiveCubes/blueEmission.gltf",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -36.94682693481445,
+            2.574337959289551,
+            33.491493225097656
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            3.966593027114868,
+            17.36266326904297
+        ],
+        "Scripts": [],
+        "UUID": "676d8c85d01a78b3",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "reflectivecube",
+        "parentUUID": "0000000000000000",
+        "path": "temp/packasset/reflectivecube.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            134.8808135986328,
+            8.434159278869629,
+            -47.213134765625
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            3.0
+        ],
+        "Scripts": [
+            {
+                "UUID": "3bcbc1d0ecf3734d",
+                "name": "backandforth",
+                "path": "Assets/Scripts/backandforth.Lua"
+            }
+        ],
+        "UUID": "9a7d7f50f13344a4",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "rainbowglass",
+        "parentUUID": "0000000000000000",
+        "path": "temp/rainbowglass.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            108.54837799072266,
+            6.958134651184082,
+            59.191959381103516
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            -21.399999618530273,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            298.02386474609375,
+            7.380775451660156
+        ],
+        "Scripts": [],
+        "UUID": "e89fd515694485da",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "reflectivecube",
+        "parentUUID": "0000000000000000",
+        "path": "temp/packasset/reflectivecube.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -42.89946365356445,
+            3.4301023483276367,
+            28.71598243713379
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            3.060351610183716,
+            10.799981117248535
+        ],
+        "Scripts": [],
+        "UUID": "dea6de43127e35a2",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "reflectivecube",
+        "parentUUID": "0000000000000000",
+        "path": "temp/packasset/reflectivecube.glb",
+        "uvScale": [
+            1.0,
+            1.0
+        ]
+    },
+    {
+        "CastShadow": true,
+        "Location": [
+            -39.85338592529297,
+            2.9461312294006348,
+            23.491764068603516
+        ],
+        "MaterialPath": "Assets/Material/Default.Material",
+        "Rotation": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "Scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "Scripts": [],
+        "UUID": "a9139fe53a4e1250",
+        "children": [],
+        "doRender": true,
+        "drawInstanced": false,
+        "hasParent": false,
+        "isBackFaceCulling": true,
+        "name": "redEmission",
+        "parentUUID": "0000000000000000",
+        "path": "Assets/Models/emissiveCubes/redEmission.gltf",
         "uvScale": [
             1.0,
             1.0

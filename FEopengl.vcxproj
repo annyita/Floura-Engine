@@ -495,7 +495,6 @@
     </ClCompile>
     <ClCompile Include="src\Render\Handler\RenderHandler.cpp" />
     <ClCompile Include="src\Render\Handler\ShaderHandler.cpp" />
-    <ClCompile Include="src\Render\Handler\TextureMapManager.cpp" />
     <ClCompile Include="src\Render\Handler\UniformManager.cpp" />
     <ClCompile Include="src\Render\Object\Billboard.cpp" />
     <ClCompile Include="src\Render\Object\Cubemap.cpp" />
@@ -960,7 +959,6 @@
     <ClInclude Include="src\Render\Handler\RenderClass.h" />
     <ClInclude Include="src\Render\Handler\RenderHandler.h" />
     <ClInclude Include="src\Render\Handler\ShaderHandler.h" />
-    <ClInclude Include="src\Render\Handler\TextureMapManager.h" />
     <ClInclude Include="src\Render\Handler\UniformManager.h" />
     <ClInclude Include="src\Render\Object\Billboard.h" />
     <ClInclude Include="src\Render\Object\Cubemap.h" />
@@ -1032,7 +1030,6 @@
     <None Include="Assets\Shaders\Db\VertexViewer.vert" />
     <None Include="Assets\Shaders\Db\VerticeViewer.geom" />
     <None Include="Assets\Shaders\Db\VerticeViewer.vert" />
-    <None Include="Assets\Shaders\Empty.shader" />
     <None Include="Assets\Shaders\gBuffer\geometryPass.frag" />
     <None Include="Assets\Shaders\gBuffer\GeometryPass.geom" />
     <None Include="Assets\Shaders\gBuffer\geometryPass.vert" />
@@ -1064,6 +1061,8 @@
     <Text Include="src\Libraries\include\imgui\LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\Shaders\common\Empty.shader" />
+    <Content Include="Assets\Shaders\common\triangle.vert" />
     <Content Include="Assets\Shaders\compute\gdfDraw.comp" />
     <Content Include="Assets\Shaders\compute\mdfBake.comp" />
     <Content Include="Assets\Shaders\Db\forWeightDBG.frag" />
@@ -1086,6 +1085,7 @@
     <Content Include="Assets\Shaders\Lighting\water.vert" />
     <Content Include="Assets\Shaders\PostProcess\TAA.frag" />
     <Content Include="Assets\Shaders\PostProcess\TAA.vert" />
+    <Content Include="Assets\Shaders\raymarched\combineGatherCaptureSWRT.frag" />
     <Content Include="Assets\Shaders\raymarched\denoisePrePassSWRT.frag" />
     <Content Include="Assets\Shaders\raymarched\indirectProbeSWRT.comp" />
     <Content Include="Assets\Shaders\raymarched\pingpongSWRT.comp" />
@@ -1094,10 +1094,6 @@
     <Content Include="Assets\Shaders\raymarched\denoiseSWRT.frag" />
     <Content Include="Assets\Shaders\raymarched\traceSWRT.comp" />
     <Content Include="Assets\Shaders\raymarched\traceSWRT.frag" />
-    <Content Include="Assets\Shaders\raymarched\raymarch.vert" />
-    <Content Include="Assets\Shaders\raymarched\raymarchold.frag" />
-    <Content Include="Assets\Shaders\raymarched\raymarcholdf.frag" />
-    <Content Include="Assets\Shaders\raymarched\raymarchssboold.frag" />
     <Content Include="Assets\Shaders\raymarched\skygradient.frag" />
     <Content Include="Assets\Shaders\raymarched\skygradient.vert" />
     <Content Include="Assets\Shaders\raymarched\skygradient_frag.spv" />

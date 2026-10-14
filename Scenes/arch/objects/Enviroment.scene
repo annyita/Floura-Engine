@@ -1,22 +1,22 @@
 [
     {
         "DefaultSkyboxPath": "Assets/Skybox/charolettenbrunn_park/Skybox.json",
-        "DirAmbient": 0.03500000014901161,
+        "DirAmbient": 0.0,
         "DirColour": [
             1.0,
             1.0,
             1.0
         ],
-        "DirEnabled": true,
+        "DirEnabled": false,
         "DirRotation": [
-            376.3999938964844,
-            238.89999389648438,
+            38.0,
+            608.2000122070313,
             0.0
         ],
-        "DirSMMaxBias": 0.003000000026077032,
+        "DirSMMaxBias": 0.0020000000949949026,
         "DirSpecEnabled": true,
         "DirSpecular": 1.0,
-        "DoShadowMap": true,
+        "DoShadowMap": false,
         "DoSkyColour": false,
         "RenderSkybox": true,
         "SkyRotation": [
@@ -28,9 +28,9 @@
             1.0,
             437.0
         ],
-        "dirShadowMapHardness": 4,
+        "dirShadowMapHardness": 1,
         "dirShadowMapSamples": 1,
-        "dirSmDistance": 100.0,
+        "dirSmDistance": 90.0,
         "dirSmHeight": 200.0,
         "indirectSamples": 0,
         "skyRGBA": [

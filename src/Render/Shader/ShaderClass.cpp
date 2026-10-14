@@ -1,11 +1,9 @@
 #include "shaderClass.h"
 #include <utils/logConsole.h>
 
-std::string get_file_contents(const char* filename)
-{
+std::string get_file_contents(const char* filename){
     std::ifstream in(filename, std::ios::binary);
-    if (in)
-    {
+    if (in){
         std::string contents;
         in.seekg(0, std::ios::end);
         contents.resize(in.tellg());
@@ -24,8 +22,7 @@ std::string get_file_contents(const char* filename)
     throw std::runtime_error("Failed to open file: " + std::string(filename));
 }
 
-void Shader::LoadShader(const char* vertexFile, const char* fragmentFile)
-{
+void Shader::LoadShader(const char* vertexFile, const char* fragmentFile){
 
         //create shaders
         GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);

@@ -20,8 +20,13 @@ public:
 	bool suppressCreation = false;
 	bool created = false;
 	
+	// ehh
 	glm::vec4 sColour;
 	bool nIsTexture = false;
+	
+	glm::vec4 colour = glm::vec4(0.0);
+	bool isFactor = false;
+	float powerFactor = 0.0f;
 	
 	void createFromCapture();
 	

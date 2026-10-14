@@ -184,7 +184,7 @@ void RenderHandler::render(){
 	
 	FE_LAYER::draw();
 	//FlouraSWRT::GDFdebugDraw();
-	FlouraSWRT::MDFdebugDraw();
+	//FlouraSWRT::MDFdebugDraw();
 	
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Restore normal rendering < wireframe
 
@@ -208,6 +208,7 @@ void RenderHandler::render(){
 		//if (raytracer::RTGlobalTransformFlag) SceneDescription::updateQuickVoxelData();
 		//SceneDescription::updateQuickVoxelData();
 		FlouraSWRT::GDFdraw();
+		FlouraSWRT::worldSpaceCacheGather();
 		FlouraSWRT::draw();
 		//RenderClass::raymarchingPass(); // comment out when not using
 		raytracer::RTGlobalTransformFlag = false; // this is dumb i know
@@ -232,15 +233,13 @@ void RenderHandler::removeInstancewRenderID(uint64_t RenderID, uint64_t instance
 	removeInstance(index);
 }
 
-void RenderHandler::removeInstance(int index)
-{
+void RenderHandler::removeInstance(int index){
 	// bounds check
 	if (index < 0 || index >= (int)models.size()) return;
 
 	models[index].instances -= 1;
 
-	if (models[index].instances <= 0)
-	{
+	if (models[index].instances <= 0){
 		// erase the item in map
 		auto handleIt = pKeyHandleMapRender.find(models[index].path);
 		if (handleIt != pKeyHandleMapRender.end()) {

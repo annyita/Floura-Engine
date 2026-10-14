@@ -530,6 +530,7 @@ void FEImGuiWindow::SystemInfomation() {
 void FEImGuiWindow::RenderWindow() {
 	ImGui::Begin("Rendering"); // ImGUI window creation
 	ImGui::Combo("Renderer", &RenderClass::currentRendererInd, rendererItems, IM_ARRAYSIZE(rendererItems));
+	//bool t = true; ImGui::ShowDemoWindow(&t);
 	if (ImGui::SmallButton("Reload Model Shaders?")) for (size_t i = 0; i < ShaderHandler::shaderObjects.size(); i++)ShaderHandler::reloadShader(i);
 	if (ImGui::SmallButton("Reload Global Shaders")) RenderClass::initGlobalShaders();
 	if (ImGui::SmallButton("Compile Shader Uniforms")) RenderClass::compileShaderUniforms();
@@ -579,14 +580,19 @@ void FEImGuiWindow::RenderWindow() {
 		if (ImGui::TreeNode("Raytracer")) {
 			ImGui::DragFloat("Resolution Scale Factor", &FlouraSWRT::resScaleFactor);
 			
+			if (ImGui::TreeNode("voxel irradiance cache")){
+				ImGui::Checkbox("DoWorldGather", &FlouraSWRT::vxirc_DoWorldGather);
+				ImGui::DragFloat("World update rate", &FlouraSWRT::cacheAccumthresh);
+				ImGui::DragInt("World gather samples", &FlouraSWRT::vxirc_fibonacciSphereSamples);
+				ImGui::Checkbox("DoScreenGather", &FlouraSWRT::vxirc_DoScreenGather);
+				ImGui::TreePop();
+			}
 			if (ImGui::TreeNode("ray world")){
 				// figures users might abuse this slider too much so i limited it, but i like extremes so i left it high
 				ImGui::DragInt("Auto MDF Res (force)", &FlouraSWRT::autoMDFres, 1.0, 1, 8192);
 				ImGui::TreePop();
 			}
 			if (ImGui::TreeNode("denoising")){
-				ImGui::Checkbox("doDenoiseSplitDBGView", &FlouraSWRT::doDenoiseSplitDBGView);
-				ImGui::Spacing();
 				ImGui::Checkbox("doTemporalAccumulation", &FlouraSWRT::doTemporalAccumulation);
 				ImGui::DragFloat("temporalAccumulationBlendFactor",&FlouraSWRT:: temporalAccumulationBlendFactor);
 				ImGui::SliderInt("svgf passes", &FlouraSWRT::passNum, 1, 5);
@@ -1224,7 +1230,8 @@ void FEImGuiWindow::addWindow(std::string typeString, bool &isOpen) {
 		}
 		else if (hierarchySelectedItem == 3) {
 			if (ImGui::ImageButton("##plusIcon", (ImTextureID)FEImGuiWindow::plusIcon.ID, ImVec2(10, 10))) {
-				LightingHandler::createLight();
+				if (Scene::spawnNearCamera) LightingHandler::createLight(Scene::maincamera.Position - ( FE_Math::getForwardFromViewMatrix(Scene::maincamera.cameraMatrix * 5.0f)));
+					else LightingHandler::createLight(glm::vec3(0.0));
 			}
 		}
 		else if (hierarchySelectedItem == 4) {

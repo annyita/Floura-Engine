@@ -158,7 +158,7 @@ void renderTarget::setupFBO(unsigned int width, unsigned int height) {
 	// GEN TEX and bind tex to fbo
 	glGenTextures(1, &Ftexture);
 	glBindTexture(GL_TEXTURE_2D, Ftexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -175,8 +175,7 @@ void renderTarget::setupFBO(unsigned int width, unsigned int height) {
 
 void renderTarget::setViewportToViewPortResolution(){glViewport(0, 0, ViewPortWidth, ViewPortHeight);}
 
-void renderTarget::attemptFrameBufferResize(unsigned int width, unsigned int height)
-{
+void renderTarget::attemptFrameBufferResize(unsigned int width, unsigned int height){
 	if (width == ViewPortWidth && height == ViewPortHeight ) return;
 	renderTarget::ViewPortWidth = width;
 	renderTarget::ViewPortHeight = height;
@@ -218,7 +217,7 @@ void renderTarget::updateFrameBufferResolution(unsigned int width, unsigned int 
 
 	
 	glBindTexture(GL_TEXTURE_2D, Ftexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	
 	dbgPass::updateDBGResolution(width, height);

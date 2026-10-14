@@ -5,26 +5,23 @@ in highp vec2 texCoord;
 
 layout(location = 0) out vec4 hIndirect;
 layout(location = 1) out vec4 hEmission;
-layout(location = 2) out vec4 hIndirectSpecular;
-layout(location = 3) out vec4 hEmissionSpecular;
-layout(location = 4) out vec4 hSpecular;
-layout(location = 5) out float hdepth;
-layout(location = 6) out vec2 filteredVariance;
+layout(location = 2) out vec4 hSpecular;
+//layout(location = 3) out float hAO;
+layout(location = 3) out float hdepth;
+layout(location = 4) out vec2 filteredVariance;
+
+uniform sampler2D swrtIndirect;
+uniform sampler2D swrtEmission;
+uniform sampler2D swrtSpecular;
+//uniform sampler2D swrtAO;
 
 uniform sampler2D depthMap;
 uniform sampler2D gNormal;
-uniform sampler2D swrtIndirect;
-uniform sampler2D swrtEmission;
-uniform sampler2D swrtIndirectSpecular;
-uniform sampler2D swrtEmissionSpecular;
-uniform sampler2D swrtSpecular;
+uniform sampler2D gPosition;
 
 uniform bool doDenoise;
-uniform bool doDenoiseSplitDBGView;
 uniform float NearPlane;
 uniform float FarPlane;
-
-//bool forceMirror = true;
 
 float lumaFromRGB(vec3 rgb){
     vec3 weights = vec3(0.2126, 0.7152, 0.0722);
@@ -61,38 +58,30 @@ float edgeAwareBoxBlur(sampler2D inputSampler, float colour, float linearizedDep
     return avgC / h;
 }
 
-
 void main(){
     vec4 indirect               = texture(swrtIndirect,texCoord);
     vec4 emission             = texture(swrtEmission,texCoord);
-    vec4 indirectSpecular  = texture(swrtIndirectSpecular,texCoord);
-    vec4 emissionSpecular = texture(swrtEmissionSpecular,texCoord);
     vec4 specular               = texture(swrtSpecular,texCoord);
+    //float ao                        = texture(swrtAO, texCoord).r; 
     float gdepth                 = texture(depthMap, texCoord).r;
     vec3 gnrm                   = normalize(texture(gNormal, texCoord).rgb);
-    
-    // set H
+    vec3 gp                       = texture(gPosition, texCoord).rgb;
 
+    // set H
     hIndirect                = indirect;
     hEmission              = emission;
-    hIndirectSpecular   = indirectSpecular;
-    hEmissionSpecular = emissionSpecular;
     hSpecular               = specular;
-    hdepth                  = gdepth;
-    
-    
-    vec2 lscreenSize = textureSize(swrtIndirect, 0);
-    bool split = true;
+    //hAO                        = ao;
+    hdepth                   = gdepth;
     
     vec2 finalVariance = vec2(indirect.a, emission.a);
     
     int denoiseRadius = 1;
     
-    if (gl_FragCoord.x > lscreenSize.x / 2 && doDenoiseSplitDBGView) split = false;
-    if (doDenoise && split){
+    if (doDenoise){
         float d = linearizeDepth(gdepth, NearPlane, FarPlane);
         finalVariance.r = edgeAwareBoxBlur(swrtIndirect, indirect.a, d, normalize(gnrm), FarPlane, denoiseRadius);
-        finalVariance.g = edgeAwareBoxBlur(swrtEmission,emission.a, d, normalize(gnrm), FarPlane, denoiseRadius);
+        //finalVariance.g = edgeAwareBoxBlur(swrtEmission,emission.a, d, normalize(gnrm), FarPlane, denoiseRadius);
     }
 
     filteredVariance = finalVariance;

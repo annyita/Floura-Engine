@@ -28,6 +28,7 @@ uniform uint64_t texture_diffuse_Handle;
 uniform uint64_t texture_roughness_Handle;
 uniform uint64_t texture_normal_Handle;
 uniform uint64_t texture_emission_Handle;
+uniform float emissionPowerFactor;
 //uniform sampler2D noiseMapTexture;
 
 uniform uint64_t BlueNoiseHandle;
@@ -135,6 +136,6 @@ void main(){
 	//gVelocity = vec4(vec3(1.0, 0.0, 0.0), 1.0);
 	
 	vec3 emission = texture(sampler2D(texture_emission_Handle), texCoord).rgb;
-	gEmission = emission;
+	gEmission = emission * emissionPowerFactor;
 	//gEmission
 }

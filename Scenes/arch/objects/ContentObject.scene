@@ -240,18 +240,6 @@
         "Type": "NULL"
     },
     {
-        "Name": "white_oak",
-        "ObjectType": "Model",
-        "Path": "temp/white_oak/white_oak.obj",
-        "Type": "NULL"
-    },
-    {
-        "Name": "white_oak_leafless",
-        "ObjectType": "Model",
-        "Path": "temp/white_oak/white_oak_leafless.obj",
-        "Type": "NULL"
-    },
-    {
         "Name": "OvercastSoilPuresky",
         "ObjectType": "Skybox",
         "Path": "Assets/Skybox/OvercastSoilPuresky/Skybox.json",
@@ -321,12 +309,6 @@
         "Name": "modularBird",
         "ObjectType": "Model",
         "Path": "temp/birdscene/modularBird.gltf",
-        "Type": "NULL"
-    },
-    {
-        "Name": "Qterrain",
-        "ObjectType": "Model",
-        "Path": "temp/Qterrain/Qterrain.gltf",
         "Type": "NULL"
     },
     {
@@ -549,6 +531,30 @@
         "Name": "ForwardAnimationWeightDBG",
         "ObjectType": "Material",
         "Path": "Assets/Material/ForwardAnimationWeightDBG.Material",
+        "Type": "NULL"
+    },
+    {
+        "Name": "suntemplescene",
+        "ObjectType": "Model",
+        "Path": "temp/suntemplescene/asset/SunTemple/SunTemple.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "rtgiDemoScene",
+        "ObjectType": "Model",
+        "Path": "temp/rtgiDemoScene.gltf/rtgiDemoScene.gltf",
+        "Type": "NULL"
+    },
+    {
+        "Name": "emtest",
+        "ObjectType": "Model",
+        "Path": "temp/emtest.glb",
+        "Type": "NULL"
+    },
+    {
+        "Name": "coast_sand_rock",
+        "ObjectType": "Model",
+        "Path": "temp/planes/coast_sand_rock.gltf",
         "Type": "NULL"
     }
 ]

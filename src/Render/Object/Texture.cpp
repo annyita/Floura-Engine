@@ -100,7 +100,7 @@ void Texture::createTexture(const char* image, const char* texType, GLuint slot)
     unsigned char* bytes = stbi_load(image, &widthImg, &heightImg, &numColCh, 0);
     //std::cout << "\n" << image << " < image \n" << widthImg << " < widthImg \n" << heightImg << " < heightImg \n" << numColCh << " < numColCh \n" << std::endl;
 
-    if (!bytes) {
+    if (!bytes) { // true
         std::cerr << "\nFailed to load texture: " << image << "\n" << std::endl;
         static unsigned char fallbackPixel[] = {
             255, 0, 255, 0, 0, 0, 255, 0, 255, 0, 0, 0,            // row 1
@@ -113,14 +113,16 @@ void Texture::createTexture(const char* image, const char* texType, GLuint slot)
         skipstbi = true;
     }
     
-    
-    // investigate cleaning up and adding proper error handling to this + freeing resources
     /*
-    int nW = 128; int nH = 128;
-    unsigned char* obytes = (unsigned char*)malloc(nW * nH * numColCh);
-    FlouraImageResize::resize2D(bytes, widthImg, heightImg, numColCh, obytes, nW, nH);
-    bytes = obytes; widthImg = nW; heightImg = nH;
+    int maxResolution = 12; bool doResolutionCap = true;
+    if (widthImg > maxResolution && doResolutionCap || heightImg > maxResolution && doResolutionCap){
+        int nW = maxResolution; int nH = maxResolution;
+        unsigned char* obytes = (unsigned char*)malloc(nW * nH * numColCh);
+        FlouraImageResize::resize2D(bytes, widthImg, heightImg, numColCh, obytes, nW, nH);
+        bytes = obytes; widthImg = nW; heightImg = nH;
+    }
     */
+    
     GLenum format = GL_RGB;
     if (numColCh == 4)format = GL_RGBA;
     //else if (numColCh == 3) format = GL_RGB;
@@ -194,15 +196,14 @@ void Texture::reload(GLuint slot){
 }
 
 
-void Texture::texUnit(Shader& shader, const char* uniform, GLuint unit)
-{
+void Texture::texUnit(Shader& shader, const char* uniform, GLuint unit){
     // Gets the location of the uniform
     GLuint texUni = glGetUniformLocation(shader.ID, uniform);
-    if (texUni == -1)
-    {
+    //if (texUni == -1)
+    //{
         // comes from mesh::Draw
        //std::cerr << "Texture.cpp Failed to find uniform: " << uniform << std::endl;
-    }
+    //}
     // Shader needs to be activated before changing the value of a uniform
     
     shader.Activate();

@@ -20,6 +20,7 @@ in vec4 fragPosLight;
 uniform bool doReflect;
 uniform uint64_t texture_diffuse_Handle;
 uniform uint64_t texture_emission_Handle;
+uniform float emissionPowerFactor;
 
 uniform sampler2D shadowMap;
 uniform uint64_t BlueNoiseHandle;
@@ -273,9 +274,9 @@ void main(){
 	//texture_emission_Handle
 	sampler2D emissionSamp = sampler2D(texture_emission_Handle);
 	vec3 emission = texture(emissionSamp, texCoord).rgb;
-	
+
 	// albedo * gi + spec + em
-	vec4 final = albedo * vec4(direct, 1.0f) + vec4(emission, 1.0f);
+	vec4 final = albedo * vec4(direct, 1.0f) + vec4(emission * emissionPowerFactor, 1.0f);
 
 	FragColor = final;
 }

@@ -1,6 +1,6 @@
 [
     {
-        "DefaultSkyboxPath": "Assets/Skybox/charolettenbrunn_park/Skybox.json",
+        "DefaultSkyboxPath": "Assets/Skybox/skyLOGL/Skybox.json",
         "DirAmbient": 0.0,
         "DirColour": [
             1.0,
@@ -9,8 +9,8 @@
         ],
         "DirEnabled": true,
         "DirRotation": [
-            367.70001220703125,
-            238.89999389648438,
+            159.1999969482422,
+            448.6000061035156,
             0.0
         ],
         "DirSMMaxBias": 0.003000000026077032,

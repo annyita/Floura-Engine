@@ -112,6 +112,11 @@ Model::~Model() {
         meshSDFs2.erase(meshSDFs2.begin() + i);
     }
     
+    //for (int i = 0; i < meshSDFs3.size(); ++i){
+    //    meshSDFs3[i]->Delete();
+    //    meshSDFs3.erase(meshSDFs3.begin() + i);
+    //}
+    
 }
 
 void Model::loadModelPathless(){
@@ -288,13 +293,14 @@ void Model::MDFgeneratePrimGPU(int sliceSize, GLuint slot, float thickness){
             return;
         }
         
-        for (int i = 0; i < meshSDFs.size(); ++i)
-            meshSDFs[i]->Delete();
-        meshSDFs.clear();
+    for (int i = 0; i < meshSDFs.size(); ++i) meshSDFs[i]->Delete();
+    meshSDFs.clear();
 
-        for (int i = 0; i < meshSDFs2.size(); ++i)
-            meshSDFs2[i]->Delete();
+    for (int i = 0; i < meshSDFs2.size(); ++i) meshSDFs2[i]->Delete();
     meshSDFs2.clear();
+    
+    //for (int i = 0; i < meshSDFs3.size(); ++i) meshSDFs3[i]->Delete();
+    //meshSDFs3.clear();
     
     auto start = std::chrono::steady_clock::now();
     
@@ -324,20 +330,22 @@ void Model::MDFgeneratePrimGPU(int sliceSize, GLuint slot, float thickness){
             //std::cout<<nBLAS[x].prims.size() << std::endl;
         }
         
+        if (nPrims.empty()) continue;
         Texture3D* nT3D; nT3D = new Texture3D();
         meshSDFs.push_back(nT3D);
         Texture3D* nT3D2; nT3D2 = new Texture3D();
         meshSDFs2.push_back(nT3D2);
-        //meshSDFs2
+        //Texture3D* nT3D3; nT3D3 = new Texture3D();
+        //meshSDFs3.push_back(nT3D3);
         
         // still pushbak the texture lets just not do anything with it
-        if (nPrims.empty()) continue;
-        
+        if (meshSDFs.empty() || meshSDFs2.empty()) continue; //  || meshSDFs3.empty()
        //
         
         // sdf generate function using voxel accel
         //flouraSDF::bakeMeshSDF(nVertices, meshes[i].indices, transformedRootNode, sliceSize, *meshSDFs.back(), slot);
         //flouraSDF::bakeMeshSDFAccel(nVertices, nVA, transformedRootNode, sliceSize, *meshSDFs.back(), slot);
+        // , *meshSDFs3.back()
         flouraSDF::bakeMeshDistanceFieldGPU(nVertices, nPrims, transformedRootNode, sliceSize, *meshSDFs.back(), *meshSDFs2.back(), slot, thickness, meshes[i].textures);
         
         std::cout << "index: " << i << " - " << abs((((meshes.size() -float(i)) - meshes.size()) / meshes.size()) * 100.0f ) << "%"<< std::endl;
@@ -361,6 +369,9 @@ void Model::MDFgenerateGridPrimGPU(int sliceSize, GLuint slot, float thickness, 
 
     for (int i = 0; i < meshSDFs2.size(); ++i) meshSDFs2[i]->Delete();
     meshSDFs2.clear();
+    
+    //for (int i = 0; i < meshSDFs3.size(); ++i) meshSDFs3[i]->Delete();
+    //meshSDFs3.clear();
     
     auto start = std::chrono::steady_clock::now();
     
@@ -449,12 +460,15 @@ void Model::MDFgenerateGridPrimGPU(int sliceSize, GLuint slot, float thickness, 
                 meshSDFs.push_back(nT3D);
                 Texture3D* nT3D2; nT3D2 = new Texture3D();
                 meshSDFs2.push_back(nT3D2);
+                //Texture3D* nT3D3; nT3D3 = new Texture3D();
+                //meshSDFs3.push_back(nT3D3);
                 cellCreation = true;
                 
                 mdfNodes.push_back(cells[i]);
-                
             }
             if (meshSDFs.empty() || meshSDFs2.empty()) continue;
+            // || meshSDFs3.empty()
+            //*meshSDFs3.back()
             
             flouraSDF::bakeMeshDistanceFieldGridGPU(nVertices, nPrims, normalizedRootNode, sliceSize, *meshSDFs.back(), *meshSDFs2.back(), slot, thickness, nMeshes[x]->textures, isnotFirst);
             
@@ -718,7 +732,7 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
 
     if (mat->GetTextureCount(targetType) == 0){
         glm::vec4 colourFloat = glm::vec4(0.0f);
-
+        float secondaryFactor = 0.0f;
         switch (type){
         case aiTextureType_DIFFUSE:{
                 aiColor4D albedoFactor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -742,6 +756,7 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
                 mat->Get(AI_MATKEY_COLOR_EMISSIVE, emissionColor);
                 mat->Get(AI_MATKEY_EMISSIVE_INTENSITY, emissionFactor);
                 colourFloat = glm::vec4(emissionColor.r,emissionColor.g,emissionColor.b, emissionFactor);
+                secondaryFactor = emissionFactor;
                 break;
             }
             default:{
@@ -751,14 +766,16 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
         }
 
         Texture texture;
+        texture.isFactor = true;
+        texture.colour = colourFloat;
+        texture.powerFactor = secondaryFactor;
         if (disableInitialTextureUploadToGPUFlag) texture.suppressCreation = true; // if the flag is enabled, suppress the entire texture from being loaded, and store the vars to be reused
         texture.createColour(colourFloat, (typeName).c_str(), slot);
         textures.push_back(texture);
         loadedTex.push_back(texture);
         loadedTexPath.push_back("null");
     }
-    else
-    {
+    else{
         for (unsigned int i = 0; i < mat->GetTextureCount(targetType); i++){
         
             aiString str; // str is path
@@ -779,10 +796,15 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
                 texture.linearFilter = true;
                 texture.createTexture(path.c_str(), (typeName).c_str(), slot);
                 
+                if (type == aiTextureType_EMISSIVE){
+                    mat->Get(AI_MATKEY_EMISSIVE_INTENSITY, texture.powerFactor);
+                }
+                
+
+                
                 // detect failure and push def value (if not diffuse)
                 if (texture.skipstbi && type != aiTextureType_DIFFUSE){
                     glm::vec4 colourFloat = glm::vec4(0.0f);
-                    
                     switch (type){
                     case aiTextureType_DIFFUSE_ROUGHNESS:{ colourFloat = glm::vec4(1.0f, 1.0f, 0.0f, 0.0f); break; }
                     case aiTextureType_NORMALS:{ colourFloat = glm::vec4(0.5f, 0.5f, 1.0f, 1.0f); break;}
@@ -792,6 +814,9 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
                     
                     // push new
                     texture.Delete();
+                    texture.isFactor = true;
+                    texture.colour = colourFloat;
+                    texture.powerFactor = 0.0;
                     texture.createColour(colourFloat, (typeName).c_str(), slot);
                 }
                 

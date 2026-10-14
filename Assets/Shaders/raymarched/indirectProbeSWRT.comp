@@ -25,14 +25,11 @@ uniform int FilterRadius;
 uniform int NumberOfSamples;
 uniform float DirSMMaxBias;
 uniform bool doDirShadowMap;
-uniform vec3 sceneBoundPos;
-uniform vec3 sceneBoundScale;
-
+uniform int fibonacciSphereSamples; 
 
 // temporary
-uniform vec3 ivPosition;
-uniform float ivScale;
-uniform bool ivDirty;
+uniform vec4 positionScale;
+//uniform bool ivDirty;
 uniform ivec3 volumeSize;
 
 struct Light{
@@ -45,7 +42,20 @@ struct Light{
 // i seriously need a light ssbo....
 uniform Light Lights[64];
 uniform int lightCount;
-// temp fields 
+
+struct clipmapLevel{
+    vec4 ps; // pos & scale
+    uint64_t handle; // dist
+    uint64_t handle2; // alb
+    uint64_t handle3; // em
+    uint64_t handle4; // metallic rough (not implemented)
+    uint64_t handle5; // indirect cache
+    uint64_t handle6; // emission cache?
+    float thickness;
+    uint dirty;
+    uint pad;
+    uint pad0;
+};
 
 struct MDF{
     vec4 position;  // uv.x
@@ -58,57 +68,148 @@ struct MDF{
     mat4 globalTransform;
 
     uint64_t instanceUUID;
-    sampler3D SDF_Handle;
+    sampler3D SDF_Handle; //sampler3D
+    sampler3D UV_Handle;
+    sampler2D ALB_Handle;
+    sampler2D EM_Handle;
+    sampler2D ARM_Handle;
 
-    sampler2D texture_diffuse_Handle;
-    sampler2D texture_roughness_Handle;
-    sampler2D texture_normal_Handle;
-    sampler2D texture_emission_Handle;
-
+    vec4 extraFactors;
+    vec4 extraFactors2;
 };
+
 // mesh distance fields
 layout(std430, binding = 11) buffer MDF_Buffer {
     MDF MDFS[];
 };
+// global distance fields
+layout(std430, binding = 12) buffer GDF_Buffer {
+    clipmapLevel GDFS[];
+};
+
+#define forceMirror 0// 0 = false, 1 = true, 2 = true + unaltered metallic
+#define drawSDFSCENE 0
+#define cascadeShape 0 // 0 = box, 1 = sphere
+#define clipmapcount 4
+
+#define r_steps 512
+#define i_steps 512
+#define r_maxdist 120.0f
+#define i_maxdist 120.0f
+
+
+#define  i_samples 1
+#define indirectMetallicMode 0 // 0 = false, 1 = true 
+#define doReflection 0
+
+#define r_roughnessFloorEnabled 0
+#define r_roughnessFloor 0.3f
+float r_shadow_ambient = 0.035f; //0.07f;
+float r_taBlendTreshhold = 0.0f;
+float r_taBlendUnderTresh = 0.5f;
+
+float maxSDFDist = 64.0f;
+
+const float eps = 0.01f;
 float mindist = 0.01f;
-float i_maxdist = 64.0f;
-int i_steps = 80;
-int i_minLodLevel = 10;
-float i_noiseThreshold  = 1.0;
-int i_coneSteps = 32;
-float i_coneApature =0.05;  // 0.1 originally but 0.05 brings simular quality to rm
-bool i_doConeTracing = false;
-float i_indirectBoost = 3.0f; // default at 1.0
-float e_emissionBoost = 1.0f; // default at 1.0
-int angles = 360;
-int maxlodLevel = 0; // off
-float transitionRangeLOD = 10.0f;
-//int SDFtextureLodLevel = 0;
-float maxSDFDist = 128.0f;
-float blendrate =  0.95;
+//float originEplison = 0.2f;
+
+// good for gdf
+//const float eps = 0.05f;
+//float mindist = 0.05f;
+float originEplison = 0.9;
+float minIntersectionDist = 0.1;
+//const float eps = 0.01f;
+//float mindist = 0.01f;
+//float originEplison = 0.90f;
+//#define r_bounces 1
 
 struct hitresult{
     vec3 normal;
     vec3 hitpos;
-    vec2 uv;
-//float totalDistanceTravelled;
+    vec3 uvw;
     float distance;
-    float maxDist;
     float iterationsDBG;
-//float lowestDistance;
-    int materialIndex;
+    int cascade;
     bool isHit;
+//vec2 uv;
+//int hitIndex;
+//float totalDistanceTravelled;    
+//float maxDist;
+//float lowestDistance;
 };
 
+
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+uvec3 murmurHash31(uint src) {
+    const uint M = 0x5bd1e995u;
+    uvec3 h = uvec3(1190494759u, 2147483647u, 3559788179u);
+    src *= M; src ^= src>>24u; src *= M;
+    h *= M; h ^= src;
+    h ^= h>>13u; h *= M; h ^= h>>15u;
+    return h;
+}
+
+// 3 outputs, 1 input
+vec3 hash31(float src) {
+    uvec3 h = murmurHash31(floatBitsToUint(src));
+    return uintBitsToFloat(h & 0x007fffffu | 0x3f800000u) - 1.0;
+}
+
+uint murmurHash13(uvec3 src) {
+    const uint M = 0x5bd1e995u;
+    uint h = 1190494759u;
+    src *= M; src ^= src>>24u; src *= M;
+    h *= M; h ^= src.x; h *= M; h ^= src.y; h *= M; h ^= src.z;
+    h ^= h>>13u; h *= M; h ^= h>>15u;
+    return h;
+}
+
+// 1 output, 3 inputs
+float hash13(vec3 src) {
+    uint h = murmurHash13(floatBitsToUint(src));
+    return uintBitsToFloat(h & 0x007fffffu | 0x3f800000u) - 1.0;
+}
+
+uvec3 murmurHash33(uvec3 src) {
+    const uint M = 0x5bd1e995u;
+    uvec3 h = uvec3(1190494759u, 2147483647u, 3559788179u);
+    src *= M; src ^= src>>24u; src *= M;
+    h *= M; h ^= src.x; h *= M; h ^= src.y; h *= M; h ^= src.z;
+    h ^= h>>13u; h *= M; h ^= h>>15u;
+    return h;
+}
+
+// 3 outputs, 3 inputs
+vec3 hash33(vec3 src) {
+    uvec3 h = murmurHash33(floatBitsToUint(src));
+    return uintBitsToFloat(h & 0x007fffffu | 0x3f800000u) - 1.0;
+}
+
+float lumaFromRGB(vec3 rgb){
+    vec3 weights = vec3(0.2126, 0.7152, 0.0722);
+    float luminance = dot(rgb, weights);
+    return luminance;
+}
 
 float sdBox(vec3 p, vec3 b){
     vec3 q = abs(p) - b;
     return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0f);
 }
 
-float fOpUnionID(float res1, float res2){
-    return (res1 < res2) ? res1 : res2;
+float sdCapsule( vec3 p, vec3 a, vec3 b, float r ){
+    vec3 pa = p - a, ba = b - a;
+    float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+    return length( pa - ba*h ) - r;
 }
+
+float sdSphere( vec3 p, float r ){
+    return length(p) - r;
+}
+
 vec4 fOpUnionID4(vec4 res1, vec4 res2){
     return (res1.x < res2.x) ? res1 : res2;
 }
@@ -118,7 +219,7 @@ vec3 transformP(vec3 p, mat4 matrix){
     return np.xyz;
 }
 
-float texture3DSDF(vec3 p, vec3 s, sampler3D handle, int lodLevel){
+float texture3DSDF(vec3 p, vec3 s, sampler3D handle){
     vec3 distance = abs(p) - s;
 
     float outsideDistance = length(max(distance, 0.0));
@@ -126,15 +227,14 @@ float texture3DSDF(vec3 p, vec3 s, sampler3D handle, int lodLevel){
     // map coords to 3d uv space
     vec3 uvw = (p / (s* 2.0)) + 0.5;
 
-    float SDF = textureLod(handle, uvw, lodLevel).r;
+    float SDF = textureLod(handle, uvw, 0).r;
 
     if (outsideDistance > 0.0) return SDF + outsideDistance;
 
     return SDF;
 }
 
-
-vec3 texture3DSDFUV(vec3 p, vec3 s, sampler3D handle, int lodLevel){
+vec3 texture3DSDFUV(vec3 p, vec3 s, sampler3D handle){
     vec3 distance = abs(p) - s;
 
     float outsideDistance = length(max(distance, 0.0));
@@ -142,7 +242,7 @@ vec3 texture3DSDFUV(vec3 p, vec3 s, sampler3D handle, int lodLevel){
     // map coords to 3d uv space
     vec3 uvw = (p / (s* 2.0)) + 0.5;
 
-    vec3 SDF = textureLod(handle, uvw, lodLevel).rgb;
+    vec3 SDF = textureLod(handle, uvw, 0).rgb;
 
     if (outsideDistance > 0.0) return vec3(SDF.r + outsideDistance, SDF.yz);
 
@@ -153,173 +253,105 @@ vec3 nearestPointOnAABB(vec3 p, vec3 pos, const vec3 extents){
     return clamp(p, pos - extents, pos + extents);
 }
 
-int calculateLODLevel(vec3 vPosition, vec3 cameraPosition, float transitionDistance, int maxLOD){
-    float distance = distance(vPosition, cameraPosition);
-    int targetLOD = int(distance / transitionDistance);
-    targetLOD = min(targetLOD, maxLOD);
+vec4 gdfScene(vec3 p, out float nThickness, out int cascade){
+    float nBD = INF;
+    nThickness = 0.0;
+    cascade = -1;
+    //return vec4(INF, 0.0, 0.0, 0.0);
+    //for (int i = 0; i < 1; i++ ){
+    for (int i = 0; i < clipmapcount; i++ ){
+        vec3 pos = GDFS[i].ps.xyz;
+        vec3 scale = vec3(GDFS[i].ps.w);
+        vec3 gp = p - pos;
 
-    return targetLOD;
-}
-
-vec4 SDFMesh(vec3 p, int index, int lodLevel){
-    vec3 gp = p - MDFS[index].gPosition.xyz;
-    vec3 fp = transformP(gp, MDFS[index].globalTransform);
-
-    vec3 nsdfv = texture3DSDFUV(fp, MDFS[index].gExtents.rgb, MDFS[index].SDF_Handle, lodLevel);
-
-    vec2 uv = nsdfv.gb * vec2(MDFS[index].position.w, MDFS[index].extents.w);
-
-    return vec4(nsdfv.r, float(index), uv);
-}
-
-float SDFMeshDist(vec3 p, int index, int lodLevel){
-    vec3 gp = p - MDFS[index].gPosition.xyz;
-    vec3 fp = transformP(gp, MDFS[index].globalTransform);
-
-    float nsdfv = texture3DSDFUV(fp, MDFS[index].gExtents.rgb, MDFS[index].SDF_Handle, lodLevel).r;
-
-    return nsdfv;
-}
-
-// moved up here since its in the way
-hitresult aabbVsRay(vec3 ro, vec3 rd, vec3 p, vec3 s){
-    hitresult hr; hr.isHit = false; hr.distance = INF;
-    vec3 Min = p - s;
-    vec3 Max = p + s;
-
-    vec3 invRD = 1.0f / rd;
-
-    vec3 t0 = (Min - ro) * invRD;
-    vec3 t1 = (Max - ro) * invRD;
-
-    vec3 tMin = min(t0, t1);
-    vec3 tMax = max(t0, t1);
-
-    float tNear = max(max(tMin.x, tMin.y), tMin.z);
-    float tFar = min(min(tMax.x, tMax.y), tMax.z);
-
-    if (tNear > tFar || tFar < 0) { return hr; }
-
-    hr.isHit = true;
-    hr.distance = tNear;
-    hr.maxDist = tFar;
-    return hr;
-}
-
-
-vec4 sceneSDFIndex(vec3 p, int i, vec3 wp){ // scene
-    vec4 tsdf = vec4(INF, 0.0, 0.0, 0.0);
-
-    //aabbHitDBGmode
-    //index
-    //if (sdBox(p - sceneBoundPos.xyz, sceneBoundScale.xyz) > tsdf.x) return tsdf;
-
-    vec3 np = nearestPointOnAABB(wp, MDFS[i].rootPosition.xyz, MDFS[i].rootExtents.xyz);
-
-    if (distance(np, wp) > maxSDFDist) return vec4(INF, 0.0, 0.0, 0.0);
-
-    float root = sdBox(p - MDFS[i].rootPosition.xyz, MDFS[i].rootExtents.xyz);
-    if (root < tsdf.x){
-
-        int lodLevel = calculateLODLevel(np, wp, transitionRangeLOD, maxlodLevel);
-        vec4 sdfm = SDFMesh(p, i, lodLevel);
-        //vec4 sdfm = vec4(root, 0.0, 0.0, 0.0);
-        tsdf = sdfm;
-    }
-    return vec4(tsdf);
-}
-
-float sceneSDFdistIndex(vec3 p, int i, vec3 wp){ // scene
-    float tsdf = INF;
-
-    //if (sdBox(p - sceneBoundPos.xyz, sceneBoundScale.xyz) > tsdf) return tsdf;
-
-    vec3 np = nearestPointOnAABB(wp, MDFS[i].rootPosition.xyz, MDFS[i].rootExtents.xyz);
-
-    if (distance(np, wp) > maxSDFDist) return INF;
-
-    float root = sdBox(p - MDFS[i].rootPosition.xyz, MDFS[i].rootExtents.xyz);
-    if (root < tsdf){
-
-        int lodLevel = calculateLODLevel(np, wp, transitionRangeLOD, maxlodLevel);
-        float sdfm = SDFMeshDist(p, i, lodLevel);
-
-        tsdf = sdfm;
-
-    }
-    return tsdf;
-}
-
-
-vec4 sceneSDF(vec3 p, vec3 wp ){ // scene
-    vec4 tsdf = vec4(INF, 0.0, 0.0, 0.0);
-
-    //aabbHitDBGmode
-
-    if (sdBox(p - sceneBoundPos.xyz, sceneBoundScale.xyz) > tsdf.x) return vec4(INF, 0.0, 0.0, 0.0);
-
-    for (int i = 0; i < MDFS.length(); i++ ){
-        vec3 np = nearestPointOnAABB(wp, MDFS[i].rootPosition.xyz, MDFS[i].rootExtents.xyz);
-
-        if (distance(np, wp) > maxSDFDist) continue;
-
-        float root = sdBox(p - MDFS[i].rootPosition.xyz, MDFS[i].rootExtents.xyz);
-        if (root < tsdf.x){
-
-            int lodLevel = calculateLODLevel(np, wp, transitionRangeLOD, maxlodLevel);
-            vec4 sdfm = SDFMesh(p, i, lodLevel);
-            //vec4 sdfm = vec4(root, 0.0, 0.0, 0.0);
-
-            if (i == 0) {
-                tsdf = sdfm;
-                continue;
-            }
-            tsdf = fOpUnionID4(tsdf,sdfm); //fOpUnionRoundID4 fOpUnionID4
+        #if cascadeShape == 0
+        float bd = sdBox(gp, scale);
+        #elif cascadeShape == 1
+        float bd = sdSphere(gp, scale.r);
+        #endif
+        if (bd > 0.0){
+            //if (bd > 0.0){
+            nBD = min(nBD, bd);
+            continue;
         }
+        //if (rand(texCoord) < bd) continue;
+
+        nThickness = GDFS[i].thickness;
+        cascade = i;
+
+        vec3 distance = abs(gp) - scale;
+
+        float outsideDistance = length(max(distance, 0.0));
+
+        // map coords to 3d uv space
+        vec3 uvw = (gp / (scale* 2.0)) + 0.5;
+
+        float SDF = textureLod(sampler3D(GDFS[i].handle), uvw, 0).r;
+        //float spheredist = sdCapsule(p - cameraPosition, vec3(0.0, 0.5, 0.0), vec3(0.0, -1.3, 0.0), 0.5);
+        //SDF = fOpUnionID4(SDF, vec4(spheredist, vec3(1.0)));
+        //SDF.y = texelFetch(sampler3D(GDFS[i].handle), ivec3(uvw), 0).y;
+        //
+        //float ID = texelFetch(sampler3D(GDFS[i].handle), ivec3(uvw), 0).g;
+        //vec2 SDF = vec2(dist, ID);
+        if (outsideDistance > 0.0) return vec4(SDF + outsideDistance, uvw);
+
+        return vec4(SDF, uvw);
     }
-    return vec4(tsdf);
+
+    return vec4(INF, 0.0, 0.0, 0.0);
 }
 
-vec3 CalculateNormalInd( in vec3 p, int index, vec3 wp){
-    const float eps = 0.01;
+vec3 CalculateNormalGDFOld( in vec3 p ){
     const vec2 h = vec2(eps,0);
-    return normalize( vec3(sceneSDFdistIndex(p+h.xyy, index, wp) - sceneSDFdistIndex(p-h.xyy, index, wp),
-            sceneSDFdistIndex(p+h.yxy, index, wp) - sceneSDFdistIndex(p-h.yxy, index, wp),
-            sceneSDFdistIndex(p+h.yyx, index, wp) - sceneSDFdistIndex(p-h.yyx, index, wp) ) );
+    float t = 0.0; int ind = 0;
+    return normalize( vec3(gdfScene(p+h.xyy, t, ind).x - gdfScene(p-h.xyy, t, ind).x,
+            gdfScene(p+h.yxy, t, ind).x - gdfScene(p-h.yxy, t, ind).x,
+            gdfScene(p+h.yyx, t, ind).x - gdfScene(p-h.yyx, t, ind).x ) );
 }
 
+// https://iquilezles.org/articles/normalsSDF/
+vec3 CalculateNormalGDF( in vec3 p  ){
+    const vec2 k = vec2(1.0,-1.0);
+    float t = 0.0; int ind = 0;
+    return normalize(
+            k.xyy*gdfScene( p + k.xyy * eps, t, ind).x +
+            k.yyx* gdfScene( p + k.yyx * eps, t, ind).x +
+            k.yxy* gdfScene( p + k.yxy * eps, t, ind).x +
+            k.xxx* gdfScene( p + k.xxx * eps, t, ind).x );
+}
 
-hitresult RayAcceleratedSphereMarchScene(vec3 ro, vec3 rd, float maxdist, float mindist, int steps, int index, vec3 wp){
+hitresult raymarchGDFscene(vec3 ro, vec3 rd, float maxdist, float mindist, int steps){
     hitresult hr;
     hr.isHit = false;
-    hr.distance = INF;
     //hr.lowestDistance = INF;
     float t = 0.0; // total distance travelled
-
     // raymarching
     for (int i = 0; i < steps; i++){
         vec3 pos = ro + rd* t;// position along the ray
-        
-        float dist = sceneSDFdistIndex(pos, index, wp);
 
+        float nThickness = 0.0; int intd = 0;
+        float dist = gdfScene(pos, nThickness, intd).r;
+
+        t += dist;
         //if (hr.lowestDistance > dist) hr.lowestDistance = dist;
 
-        if (dist < mindist){ // treat as if hit
-            vec4 m = sceneSDFIndex(pos, index, wp);
+        if (dist < (mindist + nThickness)){ // treat as if hit
+            vec4 m = gdfScene(pos, nThickness, intd);
+            hr.uvw = m.yzw;
+            // before this completes do an alpha check
+            //hr.colour = textureLod(sampler3D(GDFS[hr.cascade].handle2), hr.uvw, 0);
+
+            //hr.colour = m.yzw;
+            hr.cascade = intd;
             hr.isHit = true;
             hr.distance = dist;
-            //hr.totalDistanceTravelled = t;
-            hr.normal = CalculateNormalInd(pos, index, wp);
-            hr.materialIndex = int(m.y);
-            hr.hitpos = pos;
-            hr.uv = m.zw;
             hr.iterationsDBG = float(i) / float(steps);
-
+            hr.normal = CalculateNormalGDF(pos); // really expensive
+            hr.hitpos = pos;
+            //if (hr.colour.a < 0.5) continue;
             break;// how small dist (radius around march)
         }
-        t += dist;
-
-        if (t > maxdist) break; // failed to hit
+        if (dist > maxdist) break; // failed to hit
         //discard; // discard on far for transparency
         // how large dist (radius around march)
     }
@@ -327,110 +359,45 @@ hitresult RayAcceleratedSphereMarchScene(vec3 ro, vec3 rd, float maxdist, float 
     return hr;
 }
 
-hitresult raytraceRootHitST(vec3 ro, vec3 rd, float maxdist, float mindist, int steps, vec3 wp){
-    hitresult hr; hr.isHit = false; hr.distance = INF;
-
-    //return raymarchScene(ro, rd, maxdist, mindist, steps);
-
-    for (int i = 0; i < MDFS.length(); i++ ){
-        hitresult aabbHR = aabbVsRay(ro, rd, MDFS[i].rootPosition.xyz, MDFS[i].rootExtents.xyz);
-
-        if (!aabbHR.isHit) continue;
-        float sd = max(0.0, aabbHR.distance);
-        if (sd >= hr.distance)  continue;
-
-        float elipson = (sd + 0.001f);
-        vec3 pokePoint = ro + rd * elipson;
-
-        float lMaxDist = min(maxdist - elipson, hr.distance - elipson);
-        if (lMaxDist <= 0.0) continue;
-
-        hitresult rmHR = RayAcceleratedSphereMarchScene(pokePoint, rd, lMaxDist, mindist, steps, i, wp);
-
-        if (rmHR.isHit){
-            float tHitDist = elipson + rmHR.distance;
-            if (tHitDist < hr.distance) {
-                hr = rmHR;
-                hr.distance =tHitDist;
-                hr.hitpos = ro + rd * tHitDist;
-            }
-        }
-    }
-    return hr;
-}
-
-hitresult RayAcceleratedConeTraceScene(vec3 ro, vec3 rd, float maxdist, int steps, float aperture,  int index, vec3 wp){
+hitresult raymarchGDFinverseScene(vec3 ro, vec3 rd, float maxdist, float mindist, int steps){
     hitresult hr;
     hr.isHit = false;
-    hr.distance = INF;
+    //hr.lowestDistance = INF;
     float t = 0.0; // total distance travelled
-
     // raymarching
     for (int i = 0; i < steps; i++){
         vec3 pos = ro + rd* t;// position along the ray
 
-        float dist = sceneSDFdistIndex(pos, index, wp);
+        float nThickness = 0.0; int intd = 0;
+        float dist = -gdfScene(pos, nThickness, intd).r;
 
-        float radius = t * aperture;
-
-        //radius += radius * aperture; // add by current radius * the aperture
+        t += dist;
         //if (hr.lowestDistance > dist) hr.lowestDistance = dist;
 
-        if (dist < radius){ // treat as if hit
-            vec4 m = sceneSDFIndex(pos, index, wp);
-            hr.isHit = true;
-            hr.distance = dist;
-            //hr.totalDistanceTravelled = t;
-            hr.normal = CalculateNormalInd(pos, index, wp);
-            hr.materialIndex = int(m.y);
-            hr.iterationsDBG = float(i) / float(steps);
-            hr.hitpos = pos;
-            hr.uv = m.zw;
+        if (dist < (mindist + nThickness)){ // treat as if hit
+            //vec4 m = -gdfScene(pos, nThickness, intd);
+            hr.distance = -gdfScene(pos, nThickness, intd).r;
+            //hr.uvw = m.yzw;
+            // before this completes do an alpha check
+            //hr.colour = textureLod(sampler3D(GDFS[hr.cascade].handle2), hr.uvw, 0);
 
+            //hr.colour = m.yzw;
+            //hr.cascade = intd;
+            hr.isHit = true;
+            //hr.distance = dist;
+            //hr.iterationsDBG = float(i) / float(steps);
+            //hr.normal = -CalculateNormalGDF(pos); // really expensive
+            hr.hitpos = pos;
+            //if (hr.colour.a < 0.5) continue;
             break;// how small dist (radius around march)
         }
-        t += max(dist, radius);
-
         if (dist > maxdist) break; // failed to hit
-
+        //discard; // discard on far for transparency
+        // how large dist (radius around march)
     }
 
     return hr;
 }
-
-hitresult raytraceRootHitCT(vec3 ro, vec3 rd, float maxdist, int steps, float apature, vec3 wp){
-    hitresult hr; hr.isHit = false; hr.distance = INF;
-
-    //return raymarchScene(ro, rd, maxdist, mindist, steps);
-
-    for (int i = 0; i < MDFS.length(); i++ ){
-        hitresult aabbHR = aabbVsRay(ro, rd, MDFS[i].rootPosition.xyz, MDFS[i].rootExtents.xyz);
-
-        if (!aabbHR.isHit) continue;
-        float sd = max(0.0, aabbHR.distance);
-        if (sd >= hr.distance)  continue;
-
-        float elipson = (sd + 0.001f);
-        vec3 pokePoint = ro + rd * elipson;
-
-        float lMaxDist = min(maxdist - elipson, hr.distance - elipson);
-        if (lMaxDist <= 0.0) continue;
-
-        hitresult rmHR = RayAcceleratedConeTraceScene(pokePoint, rd, lMaxDist, steps, apature, i, wp);
-
-        if (rmHR.isHit){
-            float tHitDist = elipson + rmHR.distance;
-            if (tHitDist < hr.distance) {
-                hr = rmHR;
-                hr.distance =tHitDist;
-                hr.hitpos = ro + rd * tHitDist;
-            }
-        }
-    }
-    return hr;
-}
-
-
 
 float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal, vec3 iPosition){
     // perform perspective divide
@@ -446,22 +413,15 @@ float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal, 
         float bias = max(DirSMMaxBias * (1.0f - dot(normal, lightDirection)), 0.0005f);
         // PCF
         int sampleRadius = FilterRadius; // FilterRadius // NumberOfSamples
-        //vec2 texSize = vec2(textureSize(bluemap, 0));
-        // uv
-        //vec2 offset = vec2(fract(frame * 0.618), fract(frame * 0.133));
-        //vec2 noiseUV = (texcoord / texSize) + offset;
-
+        
         vec2 pixelSize = 1.0 / textureSize(shadowMap, 0);
         float tsamples = 0.0;
         for(int y = -sampleRadius; y <= sampleRadius; y++){
             for(int x = -sampleRadius; x <= sampleRadius; x++){
-                //float angle = texture(bluemap, noiseUV).r * NumberOfSamples;
-                //vec2 foffset = vec2(cos(angle), sin(angle));
                 float closestDepth = texture(shadowMap, vec3(lightCoords.xy + (vec2(x, y)) * pixelSize, currentDepth - bias )).r;
                 //if (currentDepth > closestDepth + bias)
                 shadow += (1.0f - closestDepth);
                 tsamples += 1.0f;
-
             }
         }
 
@@ -471,8 +431,7 @@ float CalcShadowFactorDIR(vec4 LightSpacePos, vec3 lightDirection, vec3 normal, 
     return shadow;
 }
 
-
-vec4 direcLight(vec3 ARM, vec3 iNormal, vec3 iPosition, vec3 wp){ // normals need to be recalculated based on rotation
+vec4 direcLight(vec3 ARM, vec3 iNormal, vec3 iPosition){ // normals need to be recalculated based on rotation
     // shadow map 
     float shadow = 0.0f;
 
@@ -485,22 +444,21 @@ vec4 direcLight(vec3 ARM, vec3 iNormal, vec3 iPosition, vec3 wp){ // normals nee
 
     float smShadow = 0.0;
     //float rmShadow = 0.0f;
-    bool hit = false; // will be set to false inside ssshadow;
-    
-    if (doDirShadowMap && !hit) shadow = CalcShadowFactorDIR(fragPosLight, lightDirection, normal, iPosition);
-
+    float ssShadow = 0.0f;
+    if (doDirShadowMap) shadow = CalcShadowFactorDIR(fragPosLight, lightDirection, normal, iPosition);
 
     return ((diffuse * (1.0f - shadow) + directAmbient)) * vec4(directLightCol, 1.0f);
 }
 
-
-vec4 spotLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition, vec3 wp){
+vec4 spotLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition){
     // controls how big the area that is lit up is
     float outerCone = 0.90f;
     float innerCone = 0.95f;
 
     // ambient lighting
     //float ambient = 0.0f;
+
+    vec4 finalColour = vec4(0.0f);
 
     // diffuse lighting
     vec3 normal = normalize(iNormal);
@@ -512,13 +470,17 @@ vec4 spotLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition, vec3 wp){
     float angle = dot(Lights[iteration].rotation, -lightDirection); // direction
     float inten = clamp( (angle - outerCone) / (innerCone - outerCone), 0.0f, 1.0);
 
-    //float ssShadow = shadowTrace(lightDirection, normal, iPosition);
-
     float shadow = 0.0;
-    return ((diffuse * (1.0f - shadow) * inten + 0.0f) * vec4(Lights[iteration].colour, 1.0) * inten);
+    finalColour = finalColour + ((diffuse * (1.0f - shadow) * inten + 0.0f) * vec4(Lights[iteration].colour, 1.0) * inten);
+
+    //finalColour = finalColour + (diffuse * inten + skyColor);
+
+    return finalColour;
 }
 
-vec4 pointLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition, vec3 wp){
+vec4 pointLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition){
+    vec4 finalColour = vec4(0.0f);
+
     //vec3 lightVec = (Lights[iteration].position) - crntPos;
     vec3 lightVec = (Lights[iteration].position) - iPosition;
 
@@ -535,35 +497,34 @@ vec4 pointLight(int iteration, vec3 ARM, vec3 iNormal, vec3 iPosition, vec3 wp){
 
     vec3 lightDirection = normalize(lightVec);
     float diffuse = max(dot(normal, lightDirection), 0.0f);
-    
+
+    //float ssShadow = shadowTrace(lightDirection, normal, iPosition);
+
     float shadow = 0.0;
-    return ( (diffuse * (1.0f - shadow) * inten + 0.0f) * vec4(Lights[iteration].colour, 1.0) * inten);
+
+    finalColour = finalColour + ( (diffuse * (1.0f - shadow) * inten + 0.0f) * vec4(Lights[iteration].colour, 1.0) * inten);
+
+    return finalColour;
 }
 
-vec4 lights(vec3 ARM, vec3 iNormal, vec3 iPosition, vec3 wp){
+vec4 lights(vec3 ARM, vec3 iNormal, vec3 iPosition){
     vec4 colour = vec4(0.0);
 
     int maxLights = 64;
     for (int i = 0; i < min(lightCount, maxLights); i++){
-        if (Lights[i].type == 0){
-            colour += spotLight(i, ARM, iNormal, iPosition, wp);
-        }
-
-        if (Lights[i].type == 1){
-            colour += pointLight(i, ARM, iNormal, iPosition, wp);
-        }
+        if (Lights[i].type == 0)
+        colour += spotLight(i, ARM, iNormal, iPosition);
+        if (Lights[i].type == 1)
+        colour += pointLight(i, ARM, iNormal, iPosition);
     }
 
-    if (doDirLight){
-        colour+= direcLight(ARM, iNormal, iPosition, wp);
-    }
+    if (doDirLight)
+    colour+= direcLight(ARM, iNormal, iPosition);
 
     return colour;
 }
 
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898, 78.233))) * 43758.5453);
-}
+
 
 vec3 fibonacciSphere(float i, float n){
     const float PHI = 1.61803398875;
@@ -577,119 +538,128 @@ vec3 fibonacciSphere(float i, float n){
     return vec3(x,y,z);
 }
 
-vec3 fibonacciSphereJitter(float i, float n, float time){
+vec3 fibonacciSphereJitter(int i, int n, vec3 inp){
     const float PHI = 1.61803398875;
-    float y = 1.0 - (i / (n -1.0)) * 2.0f;
+    const float PI = 3.14159265359;
+    
+    float u1 = hash13(inp + vec3(i * 1.31, 1 * 7.12, 0.0));
+    float u2 = hash13(inp + vec3(i * 3.71, 1 * 2.41, 0.0));
+    
+    float stepY = 2.0 / float(n);
+    float y = 1.0 - (float(i) + u1) * stepY;
     float radius = sqrt(max(0.0, 1.0 - y * y));
-    float theta = (2.0* 3.14159265 * i / PHI) + (time * 6.2831853);
-
-    float x = cos(theta) * radius;
-    float z = sin(theta) * radius;
-
-    return vec3(x,y,z);
+    float theta = 2.0* PI * (float(i) / PHI + u2); 
+    
+    return vec3(cos(theta) * radius, y, sin(theta) * radius);
 }
 
-void indirectMarch(vec3 nrm, vec3 ro, float mindist, vec3 wp, out vec3 ind, out vec3 em){
-    hitresult hr;
-    if (!i_doConeTracing) hr = raytraceRootHitST(ro, nrm, i_maxdist, mindist, i_steps, wp);
-    else hr = raytraceRootHitCT(ro, nrm, i_maxdist, i_coneSteps, i_coneApature, wp);
-
+void indirectMarch(vec3 dir, vec3 ro, float mindist, out vec3 ind, out vec3 em, out bool isHit){
+    hitresult hr = raymarchGDFscene(ro, dir, i_maxdist, mindist, i_steps);
+    //isHit = false;
+    
     if (!hr.isHit){
-        ind = textureLod(cmMainHandle, nrm, 5).rgb;
+        ind = textureLod(cmMainHandle, dir, 0).rgb;
         em = vec3(0.0f);
         return;
     }
+    vec3 albedo = textureLod(sampler3D(GDFS[hr.cascade].handle2), hr.uvw, 0).rgb;
+    vec3 mEmission = textureLod(sampler3D(GDFS[hr.cascade].handle3), hr.uvw, 0).rgb;
+    vec2 rm = textureLod(sampler3D(GDFS[hr.cascade].handle4), hr.uvw, 0).rg;
+    vec3 vxIND = textureLod(sampler3D(GDFS[hr.cascade].handle5), hr.uvw, 0).rgb;
+    vec3 vxEM = textureLod(sampler3D(GDFS[hr.cascade].handle6), hr.uvw, 0).rgb;
     
-    vec3 arm = textureLod( MDFS[hr.materialIndex].texture_roughness_Handle, hr.uv, i_minLodLevel).rgb;
-    vec3 mcolour = textureLod(MDFS[hr.materialIndex].texture_diffuse_Handle, hr.uv, i_minLodLevel).rgb;
-    vec3 shadow = lights(arm, hr.normal, hr.hitpos, wp).rgb;
-    shadow += directAmbient;
-    shadow = clamp(shadow, 0.0, 1.0);
+    vec3 direct = lights(vec3(1.0, rm), hr.normal, hr.hitpos).rgb;
+    direct += directAmbient;
+    direct = clamp(direct, 0.0, 1.0);
 
-    vec3 diffuseComponent = mcolour * shadow;
-    ind = diffuseComponent;
-    em = textureLod(MDFS[hr.materialIndex].texture_emission_Handle, hr.uv, i_minLodLevel).rgb;
+    // cosine angle of the incoming ray
+    //float cosTheta = max(dot(hr.normal, dir), 0.0);
+    float cosTheta = max(dot(hr.normal, -dir), 0.0);
+    
+    //ind = albedo * (direct + vxIND + vxEM); //(accumulation takes care of this so dont do it twice)
+    ind = (albedo * direct) * cosTheta * 2.0;
+    em = mEmission;
+
+    isHit = true;
 }
 
-float lumaFromRGB(vec3 rgb){
-    vec3 weights = vec3(0.2126, 0.7152, 0.0722);
-    float luminance = dot(rgb, weights);
-    return luminance;
-}
 
-float RingTracePointScene(vec3 ro, float maxdist, int steps, float aperture){
-    float distance = maxdist;
-    //hr.lowestDistance = INF;
-    float t = 0.0; // total distance travelled
+vec3 sampleHemisphere(vec3 normal, float value, vec2 uv){
+    float u = rand(uv + rand(vec2(time, value) ) );
+    float v = rand(vec2(u, rand( vec2(time, value) ) ) );
 
-    // raymarching
-    for (int i = 0; i < steps; i++){
-        vec4 m = sceneSDF(ro, ro);
-        float dist = m.x;
+    float phi = 2.0 * 3.14159265 * u;
+    float cosTheta = sqrt(1.0 - v);
+    float sinTheta = sqrt(v);
 
-        float radius = t * aperture;
+    vec3 localDir = vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
 
-        if (dist < radius){ // treat as if hit
-            distance = dist;
-            break;// how small dist (radius around march)
-        }
-        if (dist > maxdist) break; // failed to hit
+    vec3 helper = abs(normal.y) < 0.999 ? vec3(0, 1, 0) : vec3(1, 0, 0);
+    vec3 tangent = normalize(cross(helper, normal));
+    vec3 bitangent = cross(normal, tangent);
 
-        t += max(dist, radius);
-    }
-
-    return distance;
+    return tangent * localDir.x + bitangent * localDir.y + normal * localDir.z;
 }
 
 void main() {
+    //return;
     const ivec3 uvw = ivec3(gl_GlobalInvocationID.xyz);
-    
+
     if (uvw.x >= volumeSize.x ||
         uvw.y >= volumeSize.y ||
         uvw.z >= volumeSize.z) return;
-    
+
     vec3 normalizedUVW = (vec3(uvw) + vec3(0.5f)) / vec3(volumeSize);
-    //vec3 normalizedUVW = (vec3(uvw)) / vec3(volumeSize);
-    //vec3 localPos = normalizedUVW;
+    //vec3 normalizedUVW = (vec3(uvw) ) / vec3(volumeSize);
     vec3 localPos = normalizedUVW - vec3(0.5f);
-    vec3 wp = ivPosition + (localPos * ivScale);
-    float visability = RingTracePointScene(wp, 32, 32, 0.1);
+    vec3 wp = positionScale.xyz + (localPos * vec3(positionScale.w * 2.0));
     
-    // distance search i should do and push into a
-    if (visability < 0.01){
-        //imageStore(outIndirect, uvw, vec4(vec3(1.0, 0.0, 0.0), visability));
-        imageStore(outIndirect, uvw, vec4(vec3(0.0, 0.0, 0.0), visability));
-        imageStore(outEmission, uvw, vec4(vec3(0.0, 0.0, 0.0), visability));
-        return;
-    }
     vec3 indirectLighting = vec3(0.0f);
     vec3 emissionLighting = vec3(0.0f);
-    
-    for (int i = 0; i < angles; i++){
-        //vec3 dir = sampleSphere(uvw.xy + uvw.z, time);
-        vec3 dir = fibonacciSphereJitter(float(i), angles, time);
-        //vec3 dir = fibonacciSphereJitter(float(i), angles, frame);
-        //vec3 dir = fibonacciSphere(float(i), angles);
-        
-        vec3 em = vec3(0.0); vec3 ind = vec3(0.0);
 
-        indirectMarch(dir, wp, mindist, wp, ind, em);
+    float nThickness = 0.0; int intd = 0;
+    float dist = gdfScene(wp, nThickness, intd).r;
+
+
+    float blendrate = 0.95;
+    
+    if (dist < 0.001) {
+        vec3 priorIndirectData = imageLoad(outIndirect, uvw).rgb;
+        vec3 priorEmissionData = imageLoad(outEmission, uvw).rgb;
+        
+        vec3 accumulatedIndirectData = mix(vec3(0.0), priorIndirectData, 0.98);
+        vec3 accumulatedEmissionData = mix(vec3(0.0), priorEmissionData, 0.98);
+
+        imageStore(outIndirect, uvw, vec4(accumulatedIndirectData, 1.0));
+        imageStore(outEmission, uvw, vec4(accumulatedEmissionData, 1.0));
+        
+        return;
+    }
+    
+    int emHit = 0;
+    // + frame
+    for (int i = 0; i < fibonacciSphereSamples; i++){
+        //vec3 dir = sampleSphere(uvw.xy + uvw.z, time);
+        vec3 dir = fibonacciSphereJitter(i, fibonacciSphereSamples, hash33(uvw + vec3(fract(time) * 100.0 + float(i))));
+        //vec3 dir = fibonacciSphereJitter(float(i), fibonacciSphereSamples, frame);
+        //vec3 dir = fibonacciSphere(float(i), fibonacciSphereSamples);
+
+        vec3 em = vec3(0.0); vec3 ind = vec3(0.0); bool isHit = false;
+        indirectMarch(dir, wp, mindist, ind, em, isHit);
 
         indirectLighting += ind;
-        emissionLighting += em;
+        if (isHit){ emissionLighting += em; emHit++; }
+        //isHit
     }
-    vec3 ind = vec3(indirectLighting / angles) * i_indirectBoost;
-    vec3 em = vec3(emissionLighting / angles) * e_emissionBoost; // neds e boost
+    vec3 ind = vec3(indirectLighting / max(fibonacciSphereSamples, 1));
+    vec3 em = vec3(emissionLighting / max(emHit, 1)); // neds e boost
     
-    vec3 priorIndirectData = vec3(0.0); vec3 priorEmissionData = vec3(0.0);
-    if (!ivDirty){ 
-        priorIndirectData = imageLoad(outIndirect, uvw).rgb;
-        priorEmissionData = imageLoad(outEmission, uvw).rgb;
-    }
+    vec3 priorIndirectData = imageLoad(outIndirect, uvw).rgb;
+    vec3 priorEmissionData = imageLoad(outEmission, uvw).rgb;
     
     vec3 accumulatedIndirectData = mix(ind, priorIndirectData, blendrate);
     vec3 accumulatedEmissionData = mix(em, priorEmissionData, blendrate);
     
-    imageStore(outIndirect, uvw, vec4(accumulatedIndirectData, visability));
-    imageStore(outEmission, uvw, vec4(accumulatedEmissionData, visability));
+    imageStore(outIndirect, uvw, vec4(accumulatedIndirectData, 1.0));
+    imageStore(outEmission, uvw, vec4(accumulatedEmissionData, 1.0));
 }
